@@ -16,5 +16,6 @@ def reverse(x: int) -> int:
 
     return res
 
+
 print(reverse(-12356))
 print(reverse(12356))
