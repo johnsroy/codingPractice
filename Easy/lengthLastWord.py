@@ -9,7 +9,8 @@ class Solution:
         while s[i] == " ":
             i -= 1
         while i >= 0 and s[i] != " ":
-            length += 1
+            length += 1 #count char by char
+            i -= 1
         return length
 
 if __name__ == '__main__':
