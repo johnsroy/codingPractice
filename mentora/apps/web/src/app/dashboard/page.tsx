@@ -291,12 +291,14 @@ export default function DashboardPage() {
   const { user, isLoading, isAuthenticated, isTeacher } = useAuth();
   const router = useRouter();
 
-  if (isLoading) return <PageSpinner />;
+  // Redirect unauthenticated users after mount (avoids render-time side effects)
+  React.useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.push('/login?redirect=/dashboard');
+    }
+  }, [isLoading, isAuthenticated, router]);
 
-  if (!isAuthenticated) {
-    router.push('/login?redirect=/dashboard');
-    return null;
-  }
+  if (isLoading || !isAuthenticated) return <PageSpinner />;
 
   return (
     <div className="section">

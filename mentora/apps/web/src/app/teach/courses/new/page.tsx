@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, BookOpen } from 'lucide-react';
 import { SUBJECTS, GRADES } from '@mentora/shared';
@@ -29,9 +29,12 @@ export default function NewCoursePage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
 
-  if (isLoading) return <PageSpinner />;
-  if (!isAuthenticated) { router.push('/login?redirect=/teach/courses/new'); return null; }
-  if (!isTeacher) { router.push('/dashboard'); return null; }
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) router.push('/login?redirect=/teach/courses/new');
+    if (!isLoading && isAuthenticated && !isTeacher) router.push('/dashboard');
+  }, [isLoading, isAuthenticated, isTeacher, router]);
+
+  if (isLoading || !isAuthenticated || !isTeacher) return <PageSpinner />;
 
   const subjectOptions = SUBJECTS.map((s) => ({ value: s.id, label: `${s.emoji} ${s.label}` }));
   const gradeOptions = GRADES.map((g) => ({ value: g.id, label: g.label }));

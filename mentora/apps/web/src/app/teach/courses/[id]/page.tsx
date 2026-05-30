@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, PlusCircle, Send, BookOpen, FileText, GripVertical } from 'lucide-react';
@@ -61,9 +61,12 @@ export default function ManageCoursePage() {
     onError: () => toastError('Could not add lesson. Please try again.'),
   });
 
-  if (authLoading || courseLoading) return <PageSpinner />;
-  if (!isAuthenticated) { router.push('/login'); return null; }
-  if (!isTeacher) { router.push('/dashboard'); return null; }
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) router.push('/login?redirect=/teach/courses/' + id);
+    if (!authLoading && isAuthenticated && !isTeacher) router.push('/dashboard');
+  }, [authLoading, isAuthenticated, isTeacher, router, id]);
+
+  if (authLoading || courseLoading || !isAuthenticated || !isTeacher) return <PageSpinner />;
 
   if (!course) {
     return (

@@ -44,14 +44,18 @@ export default function AccountPage() {
     setYearsExp(user.yearsExperience?.toString() ?? '');
   }, [user?.id]);
 
+  // Auth guard
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) router.push('/login?redirect=/account');
+  }, [authLoading, isAuthenticated, router]);
+
   const { data: subscription } = useQuery({
     queryKey: ['subscription'],
     queryFn: () => paymentsApi.subscription(),
     enabled: isAuthenticated,
   });
 
-  if (authLoading) return <PageSpinner />;
-  if (!isAuthenticated) { router.push('/login?redirect=/account'); return null; }
+  if (authLoading || !isAuthenticated) return <PageSpinner />;
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();

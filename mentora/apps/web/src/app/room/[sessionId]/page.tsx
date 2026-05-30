@@ -285,6 +285,11 @@ export default function RoomPage() {
     enabled: !!sessionId && isAuthenticated,
   });
 
+  // Auth guard
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) router.push('/login?redirect=/room/' + sessionId);
+  }, [authLoading, isAuthenticated, router, sessionId]);
+
   useEffect(() => {
     if (authLoading || sessionLoading || !isAuthenticated || !session) return;
     setJoining(true);
@@ -295,12 +300,7 @@ export default function RoomPage() {
       .finally(() => setJoining(false));
   }, [authLoading, sessionLoading, isAuthenticated, session, sessionId]);
 
-  if (authLoading || sessionLoading || joining) return <PageSpinner />;
-
-  if (!isAuthenticated) {
-    router.push('/login?redirect=/room/' + sessionId);
-    return null;
-  }
+  if (authLoading || sessionLoading || joining || !isAuthenticated) return <PageSpinner />;
 
   if (joinError) {
     return (

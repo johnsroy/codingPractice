@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Calendar, Users, User, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
@@ -29,9 +29,12 @@ export default function NewSessionPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
 
-  if (isLoading) return <PageSpinner />;
-  if (!isAuthenticated) { router.push('/login?redirect=/teach/sessions/new'); return null; }
-  if (!isTeacher) { router.push('/dashboard'); return null; }
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) router.push('/login?redirect=/teach/sessions/new');
+    if (!isLoading && isAuthenticated && !isTeacher) router.push('/dashboard');
+  }, [isLoading, isAuthenticated, isTeacher, router]);
+
+  if (isLoading || !isAuthenticated || !isTeacher) return <PageSpinner />;
 
   const durationOptions = [
     { value: '30', label: '30 minutes' },

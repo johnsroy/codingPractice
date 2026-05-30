@@ -51,6 +51,12 @@ export default function UploadMaterialPage() {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Auth guard — redirect after mount
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) router.push('/login?redirect=/teach/upload');
+    if (!isLoading && isAuthenticated && !isTeacher) router.push('/dashboard');
+  }, [isLoading, isAuthenticated, isTeacher, router]);
+
   // Poll OCR status for pending/processing uploads
   useEffect(() => {
     const pending = files.filter(
@@ -134,9 +140,7 @@ export default function UploadMaterialPage() {
     [],
   );
 
-  if (isLoading) return <PageSpinner />;
-  if (!isAuthenticated) { router.push('/login?redirect=/teach/upload'); return null; }
-  if (!isTeacher) { router.push('/dashboard'); return null; }
+  if (isLoading || !isAuthenticated || !isTeacher) return <PageSpinner />;
 
   return (
     <div className="section">
