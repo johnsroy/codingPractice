@@ -115,22 +115,23 @@ class LiveKitVideoAdapter implements VideoAdapter {
     identity: string;
     canPublish: boolean;
   }): Promise<VideoJoinTicket> {
-    const { AccessToken, VideoGrant } = await import('livekit-server-sdk');
+    const livekit = await import('livekit-server-sdk');
+    const { AccessToken } = livekit;
 
     const expiresAt = new Date(Date.now() + 4 * 60 * 60 * 1000); // 4 h
 
-    const grant = new VideoGrant({
+    const at = new AccessToken(env.LIVEKIT_API_KEY, env.LIVEKIT_API_SECRET, {
+      identity: opts.identity,
+      ttl: 4 * 60 * 60, // 4 hours in seconds
+    });
+
+    // livekit-server-sdk v2 uses addGrant with a plain object
+    at.addGrant({
       room: opts.roomName,
       roomJoin: true,
       canPublish: opts.canPublish,
       canSubscribe: true,
     });
-
-    const at = new AccessToken(env.LIVEKIT_API_KEY, env.LIVEKIT_API_SECRET, {
-      identity: opts.identity,
-      ttl: 4 * 60 * 60, // 4 hours
-    });
-    at.addGrant(grant);
 
     const token = await at.toJwt();
 

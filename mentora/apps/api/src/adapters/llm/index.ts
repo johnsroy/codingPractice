@@ -345,7 +345,8 @@ ${opts.text.slice(0, 6000)}`;
 
   async *streamTutorReply(messages: TutorMessage[]): AsyncIterable<string> {
     const client = await this.clientPromise;
-    const stream = await client.messages.stream({
+    // .stream() returns a MessageStream helper; .textStream is an async iterable of text chunks
+    const stream = client.messages.stream({
       model: this.model,
       max_tokens: 1024,
       system:
@@ -353,13 +354,9 @@ ${opts.text.slice(0, 6000)}`;
       messages: messages.map((m) => ({ role: m.role, content: m.content })),
     });
 
-    for await (const event of stream) {
-      if (
-        event.type === 'content_block_delta' &&
-        event.delta.type === 'text_delta'
-      ) {
-        yield event.delta.text;
-      }
+    // textStream is available on the stream helper in @anthropic-ai/sdk >= 0.20
+    for await (const text of stream.textStream) {
+      yield text;
     }
   }
 }

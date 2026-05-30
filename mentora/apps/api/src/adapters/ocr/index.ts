@@ -10,7 +10,6 @@
  * For non-OCR-able types (video, audio, unknown), returns ''.
  */
 
-import path from 'path';
 import { env } from '../../config/env';
 
 export interface OcrAdapter {

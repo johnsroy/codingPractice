@@ -77,7 +77,7 @@ export const env = {
   PLATFORM_COMMISSION_PCT_PRO: getInt('PLATFORM_COMMISSION_PCT_PRO', 10),
 
   // Feature flags
-  IS_PRODUCTION: getBool('NODE_ENV', false) ? process.env.NODE_ENV === 'production' : false,
+  IS_PRODUCTION: process.env.NODE_ENV === 'production',
 } as const;
 
 export type Env = typeof env;

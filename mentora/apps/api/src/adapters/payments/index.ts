@@ -274,7 +274,7 @@ class StripePaymentsAdapter implements PaymentsAdapter {
 
   private async _initStripe(): Promise<import('stripe').default> {
     const Stripe = (await import('stripe')).default;
-    return new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: '2024-06-20' as never });
+    return new Stripe(env.STRIPE_SECRET_KEY);
   }
 
   async createCheckout(input: CheckoutInput): Promise<CheckoutResult> {
