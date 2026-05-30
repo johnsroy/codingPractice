@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { GraduationCap, Mail, Lock, User, ArrowRight, GraduationCap as TeachIcon, BookOpen } from 'lucide-react';
+import { GraduationCap, Mail, Lock, User, ArrowRight } from 'lucide-react';
 import { BRAND, ROLES } from '@mentora/shared';
 import { useAuth } from '@/lib/auth';
 import { ApiError } from '@/lib/api';

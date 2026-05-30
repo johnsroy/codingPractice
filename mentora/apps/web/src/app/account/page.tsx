@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Save, User, Mail, CreditCard, Type, CheckCircle2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { SUBJECTS, GRADES, formatPrice } from '@mentora/shared';
+// SUBJECTS/GRADES/formatPrice available from @mentora/shared if needed for extensions
 import { usersApi, paymentsApi, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useAccessibility } from '@/lib/accessibility';

@@ -51,6 +51,7 @@ export function Button({
   disabled,
   children,
   className,
+  as: _as, // consumed here, not passed to <button>
   ...rest
 }: ButtonProps) {
   const isDisabled = disabled || loading;

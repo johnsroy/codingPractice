@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Star, MapPin } from 'lucide-react';
+import { Star } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { usersApi } from '@/lib/api';
 import { Card } from '@/components/ui/Card';

@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState, lazy, Suspense } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   Mic, MicOff, Video, VideoOff, Phone, MessageSquare,
-  FileText, Bot, Users, AlertTriangle, Loader2
+  FileText, Bot, Users, AlertTriangle,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { sessionsApi } from '@/lib/api';
@@ -13,7 +13,7 @@ import { useAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import { PageSpinner, Spinner } from '@/components/ui/Spinner';
+import { PageSpinner } from '@/components/ui/Spinner';
 import { useToast } from '@/components/ui/Toast';
 import clsx from 'clsx';
 
