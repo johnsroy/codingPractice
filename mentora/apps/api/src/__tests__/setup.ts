@@ -27,7 +27,7 @@ process.env['NODE_ENV'] = 'test';
 
 // Point adapters at local/stub drivers so no external API keys are needed.
 process.env['LLM_DRIVER'] = 'stub';
-process.env['OCR_DRIVER'] = 'tesseract';
+process.env['OCR_DRIVER'] = 'mock'; // deterministic; avoids tesseract WASM worker in CI
 process.env['VIDEO_DRIVER'] = 'mock';
 process.env['PAYMENTS_DRIVER'] = 'mock';
 process.env['STORAGE_DRIVER'] = 'local';

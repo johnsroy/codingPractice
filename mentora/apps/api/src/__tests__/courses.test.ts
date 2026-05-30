@@ -104,9 +104,11 @@ describe('Course lifecycle', () => {
     const listRes = await request(app).get(BASE);
     expect(listRes.status).toBe(200);
     expect(Array.isArray(listRes.body.items)).toBe(true);
-    const found = (listRes.body.items as { id: string }[]).find((c) => c.id === courseId);
+    const found = (listRes.body.items as { id: string; status: string }[]).find(
+      (c) => c.id === courseId,
+    );
     expect(found).toBeDefined();
-    expect((found as { status: string }).status).toBe('published');
+    expect(found?.status).toBe('published');
 
     // 6. GET /courses/:id returns full course details
     const getRes = await request(app).get(`${BASE}/${courseId}`);

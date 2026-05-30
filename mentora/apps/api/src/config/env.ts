@@ -51,7 +51,7 @@ export const env = {
   AWS_SECRET_ACCESS_KEY: get('AWS_SECRET_ACCESS_KEY', ''),
 
   // OCR
-  OCR_DRIVER: get('OCR_DRIVER', 'tesseract') as 'tesseract' | 'textract',
+  OCR_DRIVER: get('OCR_DRIVER', 'tesseract') as 'tesseract' | 'textract' | 'mock',
 
   // LLM
   LLM_DRIVER: get('LLM_DRIVER', 'stub') as 'stub' | 'anthropic' | 'openai',

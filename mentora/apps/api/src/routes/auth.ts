@@ -5,6 +5,7 @@
  */
 
 import { Router } from 'express';
+import { randomUUID } from 'crypto';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { registerSchema, loginSchema } from '@mentora/shared';
@@ -65,9 +66,17 @@ function signAccessToken(payload: Omit<JwtPayload, 'iat' | 'exp'>): string {
 
 /** Create and persist a refresh token. Returns the raw token string. */
 async function createRefreshToken(userId: string): Promise<string> {
-  const raw = jwt.sign({ sub: userId, type: 'refresh' }, env.JWT_SECRET, {
-    expiresIn: env.REFRESH_TOKEN_EXPIRES_IN as jwt.SignOptions['expiresIn'],
-  });
+  // `jti` (a random token id) guarantees uniqueness even when two refresh
+  // tokens are minted for the same user within the same second — without it,
+  // the JWT payload (sub + second-precision iat) is identical and the signed
+  // string collides on the unique `token` column.
+  const raw = jwt.sign(
+    { sub: userId, type: 'refresh', jti: randomUUID() },
+    env.JWT_SECRET,
+    {
+      expiresIn: env.REFRESH_TOKEN_EXPIRES_IN as jwt.SignOptions['expiresIn'],
+    },
+  );
 
   // Decode to get expiry
   const decoded = jwt.decode(raw) as { exp?: number };

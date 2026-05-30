@@ -63,7 +63,8 @@ describe('Avatar', () => {
   it('sets a background colour only when no src is provided', () => {
     const { container } = render(<Avatar name="Jill" />);
     const wrapper = container.firstChild as HTMLElement;
-    expect(wrapper.style.backgroundColor).toMatch(/hsl/);
+    // jsdom normalises hsl() to rgb(); just assert a colour was applied.
+    expect(wrapper.style.backgroundColor).toMatch(/hsl|rgb/);
   });
 
   it('does not set inline background colour when src is provided', () => {

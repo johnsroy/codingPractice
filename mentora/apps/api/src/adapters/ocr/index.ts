@@ -69,6 +69,26 @@ class TesseractOcrAdapter implements OcrAdapter {
   }
 }
 
+// ─── Mock adapter (tests / CI / environments without the WASM runtime) ────────
+
+/**
+ * Deterministic OCR driver. Returns fixed sample text for supported types and
+ * never spawns a native/WASM worker — ideal for CI and automated tests where
+ * tesseract.js's WebAssembly runtime may be unavailable. Activate with
+ * OCR_DRIVER=mock.
+ */
+class MockOcrAdapter implements OcrAdapter {
+  async extractText(_input: string | Buffer, mime: string): Promise<string> {
+    if (!isSupportedMime(mime)) return '';
+    return [
+      'Chapter 1: Introduction',
+      'This sample text was produced by the mock OCR driver.',
+      'It demonstrates that an uploaded document was processed and that the',
+      'extracted text flows into the AI summary pipeline.',
+    ].join('\n');
+  }
+}
+
 // ─── AWS Textract adapter (production) ────────────────────────────────────────
 
 class TextractOcrAdapter implements OcrAdapter {
@@ -124,7 +144,10 @@ export function getOcrAdapter(): OcrAdapter {
 
   const driver = env.OCR_DRIVER;
 
-  if (driver === 'textract') {
+  if (driver === 'mock') {
+    _instance = new MockOcrAdapter();
+    console.log('[ocr] Using driver: MockOcrAdapter (deterministic)');
+  } else if (driver === 'textract') {
     if (!env.AWS_ACCESS_KEY_ID || !env.AWS_SECRET_ACCESS_KEY) {
       console.warn(
         '[ocr] OCR_DRIVER=textract but AWS credentials are missing — falling back to tesseract.',
