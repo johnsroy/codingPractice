@@ -1,0 +1,36 @@
+# dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# builds
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+
+# env
+.env
+.env.local
+.env.*.local
+
+# uploads & local storage
+uploads/
+storage/
+*.sqlite
+*.db
+
+# logs
+*.log
+npm-debug.log*
+
+# os / editor
+.DS_Store
+.idea/
+.vscode/
+coverage/
+
+# expo / mobile
+apps/mobile/.expo/
+apps/mobile/web-build/

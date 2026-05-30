@@ -1,0 +1,256 @@
+// Mentora data model.
+// Generated client is consumed by the Express API. Enums mirror the
+// string unions in @mentora/shared/types.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  TEACHER
+  STUDENT
+  GUARDIAN
+  ADMIN
+}
+
+enum CourseStatus {
+  draft
+  published
+  archived
+}
+
+enum OcrStatus {
+  pending
+  processing
+  done
+  failed
+  skipped
+}
+
+enum MaterialKind {
+  pdf
+  image
+  doc
+  video
+  audio
+  other
+}
+
+enum SessionKind {
+  classroom
+  one_on_one
+}
+
+enum SessionStatus {
+  scheduled
+  live
+  completed
+  cancelled
+}
+
+enum EnrollmentStatus {
+  active
+  completed
+  refunded
+  cancelled
+}
+
+enum PaymentKind {
+  subscription
+  session
+  course
+}
+
+enum PaymentStatus {
+  pending
+  succeeded
+  failed
+  refunded
+}
+
+enum SubscriptionStatus {
+  active
+  trialing
+  past_due
+  cancelled
+}
+
+model User {
+  id              String   @id @default(cuid())
+  role            Role     @default(STUDENT)
+  name            String
+  email           String   @unique
+  passwordHash    String
+  avatarUrl       String?
+  bio             String?
+  // teacher fields
+  headline        String?
+  subjects        String[] @default([])
+  grades          String[] @default([])
+  yearsExperience Int?
+  hourlyRateCents Int?
+  verified        Boolean  @default(false)
+  rating          Float?
+  proTier         Boolean  @default(false)
+  // guardian linkage
+  guardianId      String?
+  guardian        User?    @relation("GuardianChildren", fields: [guardianId], references: [id])
+  children        User[]   @relation("GuardianChildren")
+
+  courses       Course[]
+  materials     Material[]
+  sessions      ClassSession[]  @relation("TeacherSessions")
+  enrollments   Enrollment[]
+  payments      Payment[]
+  subscriptions Subscription[]
+  refreshTokens RefreshToken[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([role])
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model Course {
+  id            String       @id @default(cuid())
+  teacherId     String
+  teacher       User         @relation(fields: [teacherId], references: [id])
+  title         String
+  description   String
+  subjectId     String
+  gradeId       String
+  coverImageUrl String?
+  status        CourseStatus @default(draft)
+  priceCents    Int          @default(0)
+  rating        Float?
+
+  lessons     Lesson[]
+  materials   Material[]
+  sessions    ClassSession[]
+  enrollments Enrollment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([subjectId, gradeId, status])
+}
+
+model Lesson {
+  id        String     @id @default(cuid())
+  courseId  String
+  course    Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title     String
+  order     Int        @default(0)
+  summary   String?
+  materials Material[]
+  createdAt DateTime   @default(now())
+
+  @@index([courseId])
+}
+
+model Material {
+  id            String       @id @default(cuid())
+  ownerId       String
+  owner         User         @relation(fields: [ownerId], references: [id])
+  courseId      String?
+  course        Course?      @relation(fields: [courseId], references: [id])
+  lessonId      String?
+  lesson        Lesson?      @relation(fields: [lessonId], references: [id])
+  kind          MaterialKind @default(other)
+  title         String
+  fileUrl       String
+  mimeType      String
+  sizeBytes     Int          @default(0)
+  ocrStatus     OcrStatus    @default(pending)
+  extractedText String?
+  aiSummary     String?
+  createdAt     DateTime     @default(now())
+
+  @@index([ownerId])
+  @@index([courseId])
+}
+
+model ClassSession {
+  id              String        @id @default(cuid())
+  kind            SessionKind
+  teacherId       String
+  teacher         User          @relation("TeacherSessions", fields: [teacherId], references: [id])
+  courseId        String?
+  course          Course?       @relation(fields: [courseId], references: [id])
+  title           String
+  startsAt        DateTime
+  durationMinutes Int           @default(60)
+  status          SessionStatus @default(scheduled)
+  priceCents      Int           @default(0)
+  capacity        Int           @default(1)
+  roomName        String        @unique
+  enrollments     Enrollment[]
+  createdAt       DateTime      @default(now())
+
+  @@index([teacherId, startsAt])
+}
+
+model Enrollment {
+  id        String           @id @default(cuid())
+  studentId String
+  student   User             @relation(fields: [studentId], references: [id])
+  courseId  String?
+  course    Course?          @relation(fields: [courseId], references: [id])
+  sessionId String?
+  session   ClassSession?    @relation(fields: [sessionId], references: [id])
+  status    EnrollmentStatus @default(active)
+  createdAt DateTime         @default(now())
+
+  @@unique([studentId, courseId])
+  @@unique([studentId, sessionId])
+  @@index([studentId])
+}
+
+model Payment {
+  id         String        @id @default(cuid())
+  payerId    String
+  payer      User          @relation(fields: [payerId], references: [id])
+  amountCents Int
+  currency   String        @default("USD")
+  kind       PaymentKind
+  status     PaymentStatus @default(pending)
+  provider   String        @default("mock")
+  // commission accounting (for session/course payments)
+  platformFeeCents Int?
+  payoutCents      Int?
+  payeeId          String?
+  externalId       String?
+  createdAt  DateTime      @default(now())
+
+  @@index([payerId])
+  @@index([payeeId])
+}
+
+model Subscription {
+  id               String             @id @default(cuid())
+  userId           String
+  user             User               @relation(fields: [userId], references: [id])
+  planId           String
+  status           SubscriptionStatus @default(active)
+  currentPeriodEnd DateTime
+  provider         String             @default("mock")
+  externalId       String?
+  createdAt        DateTime           @default(now())
+
+  @@index([userId])
+}
