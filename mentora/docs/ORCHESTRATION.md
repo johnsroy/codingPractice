@@ -13,6 +13,23 @@ wired together seamlessly.
 | **frontend-engineer**| `apps/web`  | Next.js + Tailwind web app; accessibility-first, beautiful, dead-simple UI. |
 | **mobile-engineer** | `apps/mobile`| Expo / React Native app reusing the contract.                       |
 
+## The QA team
+
+A dedicated quality team covers every test layer, each agent owning a distinct
+test surface so they run in parallel without collision:
+
+| Agent                | Layer         | Owns            | Tooling                          |
+|----------------------|---------------|-----------------|----------------------------------|
+| **unit-tester**      | Unit          | `@mentora/shared` + API pure logic | Vitest                  |
+| **integration-tester** | Integration | `apps/api` HTTP flows | Vitest + supertest + test DB |
+| **component-tester** | Component     | `apps/web` UI components | Vitest + React Testing Library |
+| **e2e-tester**       | End-to-end    | `tests/e2e`     | Playwright (web + api + seed)    |
+| **uat-tester**       | UAT           | `docs/uat/`     | Persona-based human test scripts |
+
+The testing pyramid: many fast unit tests, fewer integration tests, a focused
+set of component tests, a small number of high-value e2e journeys, and human
+UAT scripts for sign-off.
+
 Agent definitions live in [`.claude/agents/`](../.claude/agents).
 
 ## How conflicts were avoided
