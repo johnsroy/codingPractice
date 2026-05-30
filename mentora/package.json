@@ -6,7 +6,8 @@
   "license": "UNLICENSED",
   "workspaces": [
     "packages/*",
-    "apps/*"
+    "apps/*",
+    "tests/*"
   ],
   "scripts": {
     "build": "npm run build --workspace=@mentora/shared && npm run build --workspace=@mentora/api && npm run build --workspace=@mentora/web",
