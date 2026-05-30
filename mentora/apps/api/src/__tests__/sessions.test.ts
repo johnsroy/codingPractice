@@ -252,7 +252,7 @@ describe('GET /api/sessions (list)', () => {
     expect(res.status).toBe(401);
   });
 
-  it('returns paginated session list', async () => {
+  it('returns a session list as an array with pagination metadata in headers', async () => {
     const teacher = await registerAndLogin('TEACHER');
 
     await request(app)
@@ -265,7 +265,10 @@ describe('GET /api/sessions (list)', () => {
       .set(authHeader(teacher.accessToken));
 
     expect(res.status).toBe(200);
-    expect(Array.isArray(res.body.items)).toBe(true);
-    expect(typeof res.body.total).toBe('number');
+    // The list endpoint returns a bare array (the client contract); pagination
+    // metadata is carried in response headers.
+    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body.length).toBeGreaterThan(0);
+    expect(res.headers['x-total-count']).toBeDefined();
   });
 });

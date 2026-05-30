@@ -330,7 +330,12 @@ export const paymentsApi = {
   subscription: () => request<Subscription | null>(API_ROUTES.payments.subscription),
 
   earnings: () =>
-    request<{ totalPaidOutCents: number; pendingCents: number; payments: import('@mentora/shared').Payment[] }>(
-      API_ROUTES.payments.earnings,
-    ),
+    request<{
+      totalPayoutCents: number;
+      totalGrossCents: number;
+      totalPlatformFeeCents: number;
+      paymentCount: number;
+      commissionPct: number;
+      currency: string;
+    }>(API_ROUTES.payments.earnings),
 };

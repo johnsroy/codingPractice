@@ -162,7 +162,7 @@ function TeacherDashboard() {
   });
 
   const myCourses = courses?.items ?? [];
-  const upcomingSessions = sessions ?? [];
+  const upcomingSessions = Array.isArray(sessions) ? sessions : [];
 
   return (
     <div className="space-y-10">
@@ -197,16 +197,18 @@ function TeacherDashboard() {
           <Card padding="md" className="text-center">
             <TrendingUp size={24} className="text-teal-500 mx-auto mb-2" />
             <p className="text-3xl font-bold text-stone-900">
-              {formatPrice(earnings.totalPaidOutCents)}
+              {formatPrice(earnings.totalPayoutCents)}
             </p>
-            <p className="text-sm text-stone-500 mt-1">Total earned</p>
+            <p className="text-sm text-stone-500 mt-1">
+              Your earnings (you keep {100 - earnings.commissionPct}%)
+            </p>
           </Card>
           <Card padding="md" className="text-center">
             <Clock size={24} className="text-accent-500 mx-auto mb-2" />
             <p className="text-3xl font-bold text-stone-900">
-              {formatPrice(earnings.pendingCents)}
+              {formatPrice(earnings.totalGrossCents)}
             </p>
-            <p className="text-sm text-stone-500 mt-1">Pending payout</p>
+            <p className="text-sm text-stone-500 mt-1">Total billed to students</p>
           </Card>
           <Card padding="md" className="text-center">
             <BookOpen size={24} className="text-brand-500 mx-auto mb-2" />

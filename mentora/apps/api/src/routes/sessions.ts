@@ -105,12 +105,12 @@ sessionsRouter.get(
       prisma.classSession.count({ where }),
     ]);
 
-    res.json({
-      items: sessions.map(serializeSession),
-      total,
-      page: pageNum,
-      pageSize: size,
-    });
+    // Return a bare array — this is the contract the web/mobile clients consume
+    // (sessionsApi.list -> ClassSession[]). Pagination headers carry the meta.
+    res.setHeader('X-Total-Count', String(total));
+    res.setHeader('X-Page', String(pageNum));
+    res.setHeader('X-Page-Size', String(size));
+    res.json(sessions.map(serializeSession));
   }),
 );
 
