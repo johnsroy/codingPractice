@@ -24,6 +24,11 @@
     "concurrently": "^9.1.0",
     "typescript": "^5.6.3"
   },
+  "//overrides": "Pin a single React across the monorepo so hoisted UI libs (lucide-react, etc.) bind to the same React the web app renders with — prevents React 'invalid element' (#31) errors from duplicate copies.",
+  "overrides": {
+    "react": "19.2.6",
+    "react-dom": "19.2.6"
+  },
   "engines": {
     "node": ">=20"
   }

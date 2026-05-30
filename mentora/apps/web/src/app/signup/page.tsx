@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { GraduationCap, Mail, Lock, User, ArrowRight } from 'lucide-react';
@@ -36,7 +36,7 @@ const roleOptions: RoleOption[] = [
   },
 ];
 
-export default function SignupPage() {
+function SignupForm() {
   const router = useRouter();
   const params = useSearchParams();
   const { register } = useAuth();
@@ -208,5 +208,13 @@ export default function SignupPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignupForm />
+    </Suspense>
   );
 }

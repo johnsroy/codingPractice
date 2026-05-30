@@ -354,9 +354,16 @@ ${opts.text.slice(0, 6000)}`;
       messages: messages.map((m) => ({ role: m.role, content: m.content })),
     });
 
-    // textStream is available on the stream helper in @anthropic-ai/sdk >= 0.20
-    for await (const text of stream.textStream) {
-      yield text;
+    // Iterate raw stream events and yield text deltas. This is stable across
+    // @anthropic-ai/sdk versions (the `.textStream` helper has moved/renamed).
+    for await (const event of stream as AsyncIterable<any>) {
+      if (
+        event?.type === 'content_block_delta' &&
+        event?.delta?.type === 'text_delta' &&
+        typeof event.delta.text === 'string'
+      ) {
+        yield event.delta.text as string;
+      }
     }
   }
 }
