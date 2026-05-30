@@ -27,7 +27,7 @@ async function loginAsTeacher(page: import('@playwright/test').Page) {
   await page.goto('/login');
   await page.getByLabel(/Email address/i).fill(TEACHER_EMAIL);
   await page.getByLabel(/Password/i).fill(TEACHER_PASSWORD);
-  await page.getByRole('button', { name: /Sign in/i }).click();
+  await page.locator('form').getByRole('button', { name: /Sign in/i }).click();
   await page.waitForURL('**/dashboard', { timeout: 20_000 });
 }
 
@@ -50,14 +50,14 @@ test.describe('Teacher dashboard', () => {
   test('"Upload material" button is visible on the teacher dashboard', async ({ page }) => {
     // The button on the teacher hero section links to /teach/upload
     await expect(
-      page.getByRole('link', { name: /Upload material/i }),
+      page.getByRole('button', { name: /Upload material/i }),
     ).toBeVisible();
   });
 
   test('Teach nav link is visible in the navbar for authenticated teachers', async ({ page }) => {
     // The Navbar renders a "Teach" link only for authenticated teachers
     const nav = page.getByRole('navigation', { name: /main navigation/i });
-    await expect(nav.getByRole('link', { name: /Teach/i })).toBeVisible();
+    await expect(nav.getByRole('link', { name: 'Teach', exact: true })).toBeVisible();
   });
 });
 

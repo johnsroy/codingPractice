@@ -46,6 +46,12 @@ const upload = multer({
       'image/tiff',
       'application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      // Plain-text notes and simple documents — many teachers paste lesson
+      // notes as .txt/.csv/.rtf, so accept them and use the text directly.
+      'text/plain',
+      'text/csv',
+      'text/markdown',
+      'application/rtf',
       'video/mp4',
       'video/webm',
       'audio/mpeg',
@@ -59,6 +65,20 @@ const upload = multer({
     }
   },
 });
+
+/**
+ * Wraps multer so a rejected file type (or size limit) becomes a friendly
+ * 400 instead of an unhandled 500 — important for our non-technical teachers.
+ */
+const uploadSingle: import('express').RequestHandler = (req, res, next) => {
+  upload.single('file')(req, res, (err: unknown) => {
+    if (err) {
+      const message = err instanceof Error ? err.message : 'File upload failed.';
+      return next(badRequest(message));
+    }
+    next();
+  });
+};
 
 // ─── MIME → MaterialKind helper ───────────────────────────────────────────────
 
@@ -82,8 +102,19 @@ async function runOcrPipeline(
     const ocr = getOcrAdapter();
     const llm = getLlmAdapter();
 
-    // Extract text
-    const extractedText = await ocr.extractText(filePath, mimeType);
+    // Plain-text formats ARE the text — read them directly, no OCR needed.
+    // Everything else goes through the OCR adapter.
+    let extractedText: string;
+    if (
+      mimeType === 'text/plain' ||
+      mimeType === 'text/csv' ||
+      mimeType === 'text/markdown'
+    ) {
+      const fs = await import('fs');
+      extractedText = (await fs.promises.readFile(filePath, 'utf8')).trim();
+    } else {
+      extractedText = await ocr.extractText(filePath, mimeType);
+    }
 
     let aiSummary: string | undefined;
     if (extractedText && extractedText.trim().length > 50) {
@@ -124,7 +155,7 @@ async function runOcrPipeline(
 materialsRouter.post(
   '/',
   authenticate,
-  upload.single('file'),
+  uploadSingle,
   asyncHandler(async (req, res) => {
     if (!req.file) throw badRequest('Please attach a file (field name: "file").');
 

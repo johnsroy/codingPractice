@@ -21,7 +21,7 @@ async function loginAsStudent(page: import('@playwright/test').Page) {
   await page.goto('/login');
   await page.getByLabel(/Email address/i).fill(STUDENT_EMAIL);
   await page.getByLabel(/Password/i).fill(STUDENT_PASSWORD);
-  await page.getByRole('button', { name: /Sign in/i }).click();
+  await page.locator('form').getByRole('button', { name: /Sign in/i }).click();
   await page.waitForURL('**/dashboard', { timeout: 20_000 });
 }
 
@@ -85,11 +85,12 @@ test.describe('AI Tutor — learner', () => {
     // Wait for the AI response; a quiz renders option buttons labelled "A.", "B.", etc.
     // or at minimum the assistant bubble text appears (not loading)
     await expect(
-      // Option buttons use aria-label "Option N: …"
+      // Option buttons use aria-label "Option N: …"; one per question, so take first.
       page.getByRole('button', { name: /^Option 1:/i })
         .or(page.getByRole('button', { name: /^Option A:/i }))
         // Fallback: any quiz answer button rendered inside .bg-brand-50
-        .or(page.locator('.bg-brand-50 button').first()),
+        .or(page.locator('.bg-brand-50 button'))
+        .first(),
     ).toBeVisible({ timeout: 45_000 });
   });
 });

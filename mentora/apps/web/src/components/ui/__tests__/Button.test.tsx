@@ -77,14 +77,16 @@ describe('Button', () => {
   });
 
   it('is disabled and shows spinner when loading', async () => {
-    const user = userEvent.setup();
+    // pointerEventsCheck disabled: the button is intentionally pointer-events:none
+    // when loading, and we still want to attempt a click to prove it's inert.
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const handleClick = vi.fn();
     render(<Button loading onClick={handleClick}>Save</Button>);
     const btn = screen.getByRole('button');
     expect(btn).toBeDisabled();
     expect(btn).toHaveAttribute('aria-disabled', 'true');
     // The Loader2 icon is rendered; clicking should not fire
-    await user.click(btn, { skipPointerEventsCheck: true });
+    await user.click(btn);
     expect(handleClick).not.toHaveBeenCalled();
   });
 

@@ -166,9 +166,10 @@ export default function TutorPage() {
             // Fallback to regular invoke
             try {
               const res = await aiApi.invoke({ task: 'tutor_chat', prompt: text.trim() });
+              const reply = typeof res.result === 'string' ? res.result : '';
               setMessages((prev) =>
                 prev.map((m) =>
-                  m.id === aiMsg.id ? { ...m, content: res.result, loading: false } : m,
+                  m.id === aiMsg.id ? { ...m, content: reply, loading: false } : m,
                 ),
               );
             } catch {
@@ -196,10 +197,16 @@ export default function TutorPage() {
           task,
           prompt: text.trim(),
         });
+        // generate_quiz returns the questions array under `result`; every other
+        // task returns a plain string. Normalise so we never render an object.
+        const questions = Array.isArray(res.result) ? res.result : res.questions;
+        const content = Array.isArray(res.result)
+          ? 'Here is a quick quiz to check your understanding:'
+          : (res.result ?? '');
         setMessages((prev) =>
           prev.map((m) =>
             m.id === aiMsg.id
-              ? { ...m, content: res.result, questions: res.questions, loading: false }
+              ? { ...m, content, questions, loading: false }
               : m,
           ),
         );

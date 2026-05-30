@@ -53,7 +53,7 @@ test.describe('Landing page', () => {
   test('stats bar shows key social-proof numbers', async ({ page }) => {
     await expect(page.getByText('2,400+')).toBeVisible();
     await expect(page.getByText('Expert mentors')).toBeVisible();
-    await expect(page.getByText('18,000+')).toBeVisible();
+    await expect(page.getByText('18,000+').first()).toBeVisible();
     await expect(page.getByText(/4\.9 \/ 5/)).toBeVisible();
   });
 
@@ -123,7 +123,7 @@ test.describe('Pricing page', () => {
   });
 
   test('Mentor (free) teacher plan is visible', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Mentor', level: 3 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Mentor', level: 3, exact: true })).toBeVisible();
     await expect(page.getByText('Start teaching, keep most of what you earn')).toBeVisible();
   });
 

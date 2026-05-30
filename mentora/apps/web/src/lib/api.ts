@@ -301,7 +301,8 @@ export const sessionsApi = {
 
 export const aiApi = {
   invoke: (data: AiRequestInput) =>
-    request<{ result: string; questions?: AiQuizQuestion[] }>(API_ROUTES.ai.invoke, {
+    // `result` is a string for most tasks, but an AiQuizQuestion[] for generate_quiz.
+    request<{ result: string | AiQuizQuestion[]; questions?: AiQuizQuestion[] }>(API_ROUTES.ai.invoke, {
       method: 'POST',
       body: data,
     }),

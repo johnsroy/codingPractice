@@ -93,7 +93,7 @@ test.describe('Log out', () => {
     await page.goto('/login');
     await page.getByLabel(/Email address/i).fill('student@mentora.app');
     await page.getByLabel(/Password/i).fill('Password123!');
-    await page.getByRole('button', { name: /Sign in/i }).click();
+    await page.locator('form').getByRole('button', { name: /Sign in/i }).click();
     await page.waitForURL('**/dashboard', { timeout: 15_000 });
 
     // Now sign out
@@ -121,7 +121,7 @@ test.describe('Log in — seeded accounts', () => {
 
     await page.getByLabel(/Email address/i).fill('student@mentora.app');
     await page.getByLabel(/Password/i).fill('Password123!');
-    await page.getByRole('button', { name: /Sign in/i }).click();
+    await page.locator('form').getByRole('button', { name: /Sign in/i }).click();
 
     await page.waitForURL('**/dashboard', { timeout: 15_000 });
     // Student dashboard shows the "Find a teacher" quick action
@@ -133,10 +133,10 @@ test.describe('Log in — seeded accounts', () => {
 
     await page.getByLabel(/Email address/i).fill('student@mentora.app');
     await page.getByLabel(/Password/i).fill('WrongPassword!');
-    await page.getByRole('button', { name: /Sign in/i }).click();
+    await page.locator('form').getByRole('button', { name: /Sign in/i }).click();
 
     await expect(
-      page.getByRole('alert'),
+      page.locator('form').getByRole('alert'),
     ).toContainText(/Email or password is incorrect/i);
 
     await expect(page).toHaveURL(/\/login/);
@@ -144,7 +144,7 @@ test.describe('Log in — seeded accounts', () => {
 
   test('empty form shows field-level validation errors', async ({ page }) => {
     await page.goto('/login');
-    await page.getByRole('button', { name: /Sign in/i }).click();
+    await page.locator('form').getByRole('button', { name: /Sign in/i }).click();
 
     await expect(
       page.getByText(/Please enter your email address/i),
