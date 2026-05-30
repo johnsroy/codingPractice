@@ -9,9 +9,17 @@
  *      npx prisma migrate deploy
  * 3. Run the suite:
  *      npm test --workspace=@mentora/api
+ *      # or from the repo root:
+ *      pnpm --filter @mentora/api test
  *
- * The setup file truncates all tables before each test file so tests are
+ * The setup file truncates all tables before each test so tests are
  * hermetic — create everything they need; rely on nothing pre-seeded.
+ *
+ * Adapter singletons are not reset between tests because the env vars
+ * (set at the top of this file, before any imports) are read on first
+ * factory call, and all adapters default to their stub/mock/local variants
+ * when no external keys are present. Re-importing in singleFork mode would
+ * not clear the cache anyway; the env values are stable for the entire run.
  */
 
 // Ensure we run as 'test' so morgan is suppressed and error messages are verbose.
@@ -39,19 +47,13 @@ beforeAll(async () => {
 });
 
 /**
- * Truncate every table before each test *file* (via beforeEach on the global
- * scope, which runs once per file when singleFork=true and each file imports
- * setup.ts fresh).
+ * Truncate every table before each test so tests are fully isolated.
  *
  * We use CASCADE so FK-constrained child rows are removed automatically.
- * The order doesn't matter with CASCADE, but we list them explicitly for
- * documentation clarity.
- *
- * After truncating, reset singleton adapter instances so each test file gets
- * a fresh adapter (important if an earlier file set env vars differently).
+ * The explicit table list documents the full schema; CASCADE makes ordering
+ * unnecessary, but we list children before parents for clarity.
  */
 beforeEach(async () => {
-  // Truncate in dependency order (children first to avoid FK issues without CASCADE on some PG configs)
   await prisma.$executeRaw`TRUNCATE TABLE
     "Payment",
     "Subscription",
