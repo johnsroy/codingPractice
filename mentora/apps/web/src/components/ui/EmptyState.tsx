@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 import clsx from 'clsx';
 import { Button } from './Button';
 
@@ -36,9 +37,9 @@ export function EmptyState({ icon, title, description, action, className }: Empt
       )}
       {action && (
         action.href ? (
-          <Button as="button" onClick={() => { window.location.href = action.href!; }}>
-            {action.label}
-          </Button>
+          <Link href={action.href} className="no-underline">
+            <Button>{action.label}</Button>
+          </Link>
         ) : (
           <Button onClick={action.onClick}>{action.label}</Button>
         )

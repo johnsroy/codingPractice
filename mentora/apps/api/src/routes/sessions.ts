@@ -12,6 +12,7 @@
 import { Router } from 'express';
 import crypto from 'crypto';
 import { createSessionSchema } from '@mentora/shared';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { badRequest, forbidden, notFound } from '../lib/errors';
 import { validate } from '../middleware/validate';
@@ -72,22 +73,22 @@ sessionsRouter.get(
     const size = Math.min(100, Math.max(1, parseInt(pageSize, 10) || 20));
     const skip = (pageNum - 1) * size;
 
-    const where: Record<string, unknown> = {};
+    const where: Prisma.ClassSessionWhereInput = {};
 
     if (mine === 'true') {
       // Teacher sees own sessions; students see sessions they're enrolled in
       if (req.user!.role === 'TEACHER') {
-        where['teacherId'] = req.user!.sub;
+        where.teacherId = req.user!.sub;
       } else {
-        where['enrollments'] = { some: { studentId: req.user!.sub } };
+        where.enrollments = { some: { studentId: req.user!.sub } };
       }
     }
 
-    if (kind) where['kind'] = kind;
+    if (kind) where.kind = kind as 'classroom' | 'one_on_one';
 
     if (upcoming === 'true') {
-      where['startsAt'] = { gte: new Date() };
-      where['status'] = { in: ['scheduled', 'live'] };
+      where.startsAt = { gte: new Date() };
+      where.status = { in: ['scheduled', 'live'] };
     }
 
     const [sessions, total] = await prisma.$transaction([

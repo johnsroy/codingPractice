@@ -1,4 +1,6 @@
 'use client';
+// Note: metadata is intentionally omitted here (client component).
+// The default title from layout.tsx applies.
 
 import React, { useState } from 'react';
 import Link from 'next/link';
@@ -15,10 +17,6 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import clsx from 'clsx';
-
-export const metadata = {
-  title: 'Plans & Pricing',
-};
 
 function PlanCard({ plan, annual }: { plan: Plan; annual: boolean }) {
   const price = annual && plan.annualPriceCents != null

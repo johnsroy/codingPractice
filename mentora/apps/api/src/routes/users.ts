@@ -8,6 +8,7 @@
 
 import { Router } from 'express';
 import { updateProfileSchema } from '@mentora/shared';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { notFound } from '../lib/errors';
 import { validate } from '../middleware/validate';
@@ -83,16 +84,16 @@ usersRouter.get(
     const skip = (pageNum - 1) * size;
 
     // Build Prisma where clause
-    const where: Record<string, unknown> = { role: 'TEACHER' };
+    const where: Prisma.UserWhereInput = { role: 'TEACHER' };
 
     if (subject) {
-      where['subjects'] = { has: subject };
+      where.subjects = { has: subject };
     }
     if (grade) {
-      where['grades'] = { has: grade };
+      where.grades = { has: grade };
     }
     if (q) {
-      where['OR'] = [
+      where.OR = [
         { name: { contains: q, mode: 'insensitive' } },
         { bio: { contains: q, mode: 'insensitive' } },
         { headline: { contains: q, mode: 'insensitive' } },

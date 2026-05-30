@@ -11,6 +11,7 @@
 
 import { Router } from 'express';
 import { createCourseSchema, updateCourseSchema } from '@mentora/shared';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { badRequest, forbidden, notFound } from '../lib/errors';
 import { validate } from '../middleware/validate';
@@ -38,12 +39,12 @@ coursesRouter.get(
     const size = Math.min(100, Math.max(1, parseInt(pageSize, 10) || 20));
     const skip = (pageNum - 1) * size;
 
-    const where: Record<string, unknown> = { status: 'published' };
-    if (subject) where['subjectId'] = subject;
-    if (grade) where['gradeId'] = grade;
-    if (teacherId) where['teacherId'] = teacherId;
+    const where: Prisma.CourseWhereInput = { status: 'published' };
+    if (subject) where.subjectId = subject;
+    if (grade) where.gradeId = grade;
+    if (teacherId) where.teacherId = teacherId;
     if (q) {
-      where['OR'] = [
+      where.OR = [
         { title: { contains: q, mode: 'insensitive' } },
         { description: { contains: q, mode: 'insensitive' } },
       ];
