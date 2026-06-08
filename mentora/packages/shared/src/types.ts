@@ -128,13 +128,53 @@ export type AiTask =
   | 'explain_simply'
   | 'lesson_plan'
   | 'tutor_chat'
-  | 'grade_answer';
+  | 'grade_answer'
+  /** Agentic: research a new topic on the live web, then synthesize a briefing. */
+  | 'research_topic';
 
 export interface AiQuizQuestion {
   question: string;
   options: string[];
   answerIndex: number;
   explanation: string;
+}
+
+/** A single web source returned by the research/search adapter. */
+export interface ResearchSource {
+  title: string;
+  url: string;
+  snippet: string;
+  /** Optional published date / site name for display. */
+  publishedAt?: string | null;
+  siteName?: string | null;
+}
+
+/** A section of a generated lesson outline. */
+export interface LessonOutlineSection {
+  title: string;
+  points: string[];
+}
+
+/**
+ * The structured result of an agentic research run: the AI searches the live
+ * web for a topic and synthesizes a teacher-ready briefing with citations.
+ */
+export interface ResearchBriefing {
+  topic: string;
+  gradeId?: string | null;
+  subjectId?: string | null;
+  /** A plain-language overview the teacher can read in under a minute. */
+  summary: string;
+  /** The most important facts/talking points. */
+  keyPoints: string[];
+  /** A suggested, ready-to-teach lesson structure. */
+  suggestedLessonOutline: LessonOutlineSection[];
+  /** Cited web sources the briefing was built from. */
+  sources: ResearchSource[];
+  /** Which provider produced this (e.g. "anthropic+tavily" or "stub"). */
+  provider: string;
+  /** True when synthesized from live web results (vs the offline stub). */
+  liveWeb: boolean;
 }
 
 export interface Payment {

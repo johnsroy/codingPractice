@@ -58,6 +58,7 @@ export const API_ROUTES = {
   ai: {
     invoke: '/ai', // body: AiRequestInput
     tutorStream: '/ai/tutor/stream', // SSE chat for the AI tutor
+    research: '/ai/research', // agentic web research → ResearchBriefing
   },
 
   payments: {

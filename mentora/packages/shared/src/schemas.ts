@@ -64,6 +64,7 @@ export const aiRequestSchema = z.object({
     'lesson_plan',
     'tutor_chat',
     'grade_answer',
+    'research_topic',
   ]),
   materialId: z.string().optional(),
   prompt: z.string().max(8000).optional(),
@@ -71,6 +72,15 @@ export const aiRequestSchema = z.object({
   subjectId: z.string().optional(),
   context: z.string().max(20000).optional(),
   numQuestions: z.number().int().min(1).max(20).optional(),
+  /** The subject/topic to research (used by research_topic). */
+  topic: z.string().min(2).max(300).optional(),
+});
+
+/** Dedicated payload for the agentic topic-research endpoint. */
+export const researchRequestSchema = z.object({
+  topic: z.string().min(2).max(300),
+  gradeId: z.string().optional(),
+  subjectId: z.string().optional(),
 });
 
 export const checkoutSchema = z.object({
@@ -88,4 +98,5 @@ export type CreateCourseInput = z.infer<typeof createCourseSchema>;
 export type CreateLessonInput = z.infer<typeof createLessonSchema>;
 export type CreateSessionInput = z.infer<typeof createSessionSchema>;
 export type AiRequestInput = z.infer<typeof aiRequestSchema>;
+export type ResearchRequestInput = z.infer<typeof researchRequestSchema>;
 export type CheckoutInput = z.infer<typeof checkoutSchema>;
