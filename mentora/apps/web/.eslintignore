@@ -1,0 +1,5 @@
+# Tests are linted/typechecked by the test runner config, not the app build.
+**/__tests__/**
+**/*.test.ts
+**/*.test.tsx
+src/test/**

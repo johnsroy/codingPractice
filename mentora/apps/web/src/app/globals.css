@@ -1,0 +1,116 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   Mentora global styles — accessible, warm, easy to read
+   ============================================================ */
+
+@layer base {
+  :root {
+    /* CSS custom properties for design tokens */
+    --color-brand:    #6366f1;
+    --color-accent:   #f59e0b;
+    --color-teal:     #14b8a6;
+    --color-surface:  #fafaf9;
+    --color-text:     #1c1917;
+    --color-muted:    #57534e;
+    --radius:         0.625rem;
+
+    /* Font-size scaling — controlled by accessibility toggle */
+    --font-scale: 1;
+  }
+
+  /* Accessibility: larger-text mode adds 25% */
+  html[data-font-size="large"] {
+    --font-scale: 1.25;
+  }
+
+  html {
+    font-size: calc(18px * var(--font-scale)); /* 18px base */
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-surface-50 text-stone-900 antialiased;
+    font-family: var(--font-sans, system-ui, sans-serif);
+    line-height: 1.7;
+  }
+
+  /* Comfortable heading hierarchy */
+  h1 { @apply text-4xl font-bold tracking-tight; }
+  h2 { @apply text-3xl font-bold; }
+  h3 { @apply text-2xl font-semibold; }
+  h4 { @apply text-xl font-semibold; }
+  h5 { @apply text-lg font-medium; }
+  h6 { @apply text-base font-medium; }
+
+  /* High-contrast focus ring — WCAG 2.4.11 */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-brand-500 ring-offset-2;
+  }
+
+  /* Links */
+  a {
+    @apply text-brand-600 underline-offset-2;
+  }
+  a:hover {
+    @apply text-brand-700;
+  }
+
+  /* Images */
+  img, video {
+    @apply max-w-full;
+  }
+
+  /* Smooth transitions on interactive elements */
+  button, a, input, select, textarea {
+    @apply transition-colors duration-150;
+  }
+}
+
+@layer components {
+  /* Skip-to-content link for keyboard / screen-reader users */
+  .skip-link {
+    @apply sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50
+           focus:bg-brand-600 focus:text-white focus:px-4 focus:py-2 focus:rounded-lg focus:font-semibold;
+  }
+
+  /* Page wrapper */
+  .page-container {
+    @apply mx-auto max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+
+  /* Section spacing */
+  .section {
+    @apply py-16 lg:py-24;
+  }
+
+  /* Card base */
+  .card {
+    @apply bg-white rounded-xl shadow-card border border-surface-200 overflow-hidden;
+  }
+
+  /* Gradient hero background */
+  .hero-gradient {
+    background: linear-gradient(135deg, #eef2ff 0%, #f0fdfa 50%, #fffbeb 100%);
+  }
+}
+
+@layer utilities {
+  /* Accessible tap-target helper (48×48 min) */
+  .tap-target {
+    @apply min-h-[48px] min-w-[48px] flex items-center justify-center;
+  }
+
+  /* Text balance for headings */
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Visually hidden but accessible */
+  .visually-hidden {
+    @apply sr-only;
+  }
+}

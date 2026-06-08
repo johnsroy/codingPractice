@@ -1,0 +1,32 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: mentora-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mentora
+      POSTGRES_PASSWORD: mentora
+      POSTGRES_DB: mentora
+    ports:
+      - "5432:5432"
+    volumes:
+      - mentora_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mentora"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Optional: LiveKit SFU for true low-latency video in local dev.
+  # Activate with `docker compose --profile video up`.
+  livekit:
+    image: livekit/livekit-server:latest
+    profiles: ["video"]
+    command: --dev
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "7882:7882/udp"
+
+volumes:
+  mentora_pgdata:

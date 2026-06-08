@@ -1,0 +1,41 @@
+{
+  "name": "mentora",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Mentora — where seasoned professionals teach K-12. Web + mobile learning platform with OCR, low-latency video, and AI baked in.",
+  "license": "UNLICENSED",
+  "workspaces": [
+    "packages/*",
+    "apps/*",
+    "tests/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace=@mentora/shared && npm run build --workspace=@mentora/api && npm run build --workspace=@mentora/web",
+    "dev": "concurrently -n api,web -c blue,green \"npm run dev --workspace=@mentora/api\" \"npm run dev --workspace=@mentora/web\"",
+    "dev:api": "npm run dev --workspace=@mentora/api",
+    "dev:web": "npm run dev --workspace=@mentora/web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspace=@mentora/shared && npm run test --workspace=@mentora/web && npm run test --workspace=@mentora/api",
+    "test:unit": "npm run test --workspace=@mentora/shared",
+    "test:component": "npm run test --workspace=@mentora/web",
+    "test:integration": "npm run test --workspace=@mentora/api",
+    "test:e2e": "npm run test --workspace=@mentora/e2e",
+    "db:up": "docker compose up -d postgres",
+    "db:migrate": "npm run db:migrate --workspace=@mentora/api",
+    "db:seed": "npm run db:seed --workspace=@mentora/api",
+    "bootstrap": "npm install && npm run build --workspace=@mentora/shared"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "typescript": "^5.6.3"
+  },
+  "//overrides": "Pin a single React across the monorepo so hoisted UI libs (lucide-react, etc.) bind to the same React the web app renders with — prevents React 'invalid element' (#31) errors from duplicate copies.",
+  "overrides": {
+    "react": "19.2.6",
+    "react-dom": "19.2.6"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
