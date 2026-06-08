@@ -1,11 +1,12 @@
 /**
  * AI routes — dispatch LLM tasks and Server-Sent Events (SSE) tutor stream.
  *   POST /ai              — invoke any AI task (aiRequestSchema)
+ *   POST /ai/research     — agentic web-research → ResearchBriefing (researchRequestSchema)
  *   GET  /ai/tutor/stream — SSE stream for real-time tutor chat
  */
 
 import { Router, Request, Response } from 'express';
-import { aiRequestSchema } from '@mentora/shared';
+import { aiRequestSchema, researchRequestSchema } from '@mentora/shared';
 import { prisma } from '../lib/prisma';
 import { badRequest, notFound } from '../lib/errors';
 import { validate } from '../middleware/validate';
@@ -22,7 +23,7 @@ aiRouter.post(
   authenticate,
   validate(aiRequestSchema),
   asyncHandler(async (req, res) => {
-    const { task, materialId, prompt, gradeId, subjectId, context, numQuestions } =
+    const { task, materialId, prompt, gradeId, subjectId, context, numQuestions, topic } =
       req.body as {
         task: string;
         materialId?: string;
@@ -31,6 +32,7 @@ aiRouter.post(
         subjectId?: string;
         context?: string;
         numQuestions?: number;
+        topic?: string;
       };
 
     const llm = getLlmAdapter();
@@ -109,9 +111,42 @@ aiRouter.post(
         return res.json({ task, result: graded });
       }
 
+      case 'research_topic': {
+        const researchTopic = topic ?? prompt;
+        if (!researchTopic) {
+          throw badRequest('A topic is required for the research_topic task. Provide it via the "topic" or "prompt" field.');
+        }
+        const briefing = await llm.researchTopic({
+          topic: researchTopic,
+          gradeId,
+          subjectId,
+        });
+        return res.json({ task, result: briefing });
+      }
+
       default:
         throw badRequest(`Unknown AI task: ${task}`);
     }
+  }),
+);
+
+// POST /ai/research — dedicated agentic web-research endpoint
+// Body: researchRequestSchema { topic, gradeId?, subjectId? }
+// Returns: ResearchBriefing directly (not wrapped in { task, result })
+aiRouter.post(
+  '/research',
+  authenticate,
+  validate(researchRequestSchema),
+  asyncHandler(async (req, res) => {
+    const { topic, gradeId, subjectId } = req.body as {
+      topic: string;
+      gradeId?: string;
+      subjectId?: string;
+    };
+
+    const llm = getLlmAdapter();
+    const briefing = await llm.researchTopic({ topic, gradeId, subjectId });
+    return res.json(briefing);
   }),
 );
 

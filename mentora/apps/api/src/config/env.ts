@@ -76,6 +76,13 @@ export const env = {
   PLATFORM_COMMISSION_PCT: getInt('PLATFORM_COMMISSION_PCT', 15),
   PLATFORM_COMMISSION_PCT_PRO: getInt('PLATFORM_COMMISSION_PCT_PRO', 10),
 
+  // Research / web-search adapter
+  RESEARCH_DRIVER: get('RESEARCH_DRIVER', 'stub') as 'stub' | 'tavily' | 'brave' | 'serpapi',
+  TAVILY_API_KEY: get('TAVILY_API_KEY', ''),
+  BRAVE_API_KEY: get('BRAVE_API_KEY', ''),
+  SERPAPI_API_KEY: get('SERPAPI_API_KEY', ''),
+  RESEARCH_MAX_RESULTS: getInt('RESEARCH_MAX_RESULTS', 6),
+
   // Feature flags
   IS_PRODUCTION: process.env.NODE_ENV === 'production',
 } as const;

@@ -11,8 +11,9 @@
  * with a warning so the server never fails to start.
  */
 
-import type { AiQuizQuestion } from '@mentora/shared';
+import type { AiQuizQuestion, ResearchBriefing, LessonOutlineSection } from '@mentora/shared';
 import { env } from '../../config/env';
+import { getResearchAdapter } from '../research';
 
 // ─── Shared types ─────────────────────────────────────────────────────────────
 
@@ -29,6 +30,13 @@ export interface LessonPlanOpts {
 }
 
 export type TutorMessage = { role: 'user' | 'assistant'; content: string };
+
+export interface ResearchTopicOpts {
+  topic: string;
+  gradeId?: string;
+  subjectId?: string;
+  maxResults?: number;
+}
 
 export interface LlmAdapter {
   /** Condense a body of text into a short summary. */
@@ -70,6 +78,19 @@ export interface LlmAdapter {
    * Stub yields the full reply in one chunk; real drivers stream tokens.
    */
   streamTutorReply(messages: TutorMessage[]): AsyncIterable<string>;
+
+  /**
+   * Agentic research: searches the web (via the research adapter) and
+   * synthesises a teacher-ready ResearchBriefing with citations.
+   *
+   * Anthropic driver: runs a real tool-use loop where the model issues
+   * web_search tool calls, results are fed back, and the model then returns
+   * structured JSON for the briefing.
+   *
+   * Stub driver: deterministically synthesises a useful briefing from the
+   * research adapter's (stub or real) results without an LLM call.
+   */
+  researchTopic(opts: ResearchTopicOpts): Promise<ResearchBriefing>;
 }
 
 // ─── Stub adapter ─────────────────────────────────────────────────────────────
@@ -202,6 +223,49 @@ class StubLlmAdapter implements LlmAdapter {
     }
   }
 
+  async researchTopic(opts: ResearchTopicOpts): Promise<ResearchBriefing> {
+    const research = getResearchAdapter();
+    const sources = await research.search(
+      `${opts.topic}${opts.gradeId ? ` grade ${opts.gradeId}` : ''}${opts.subjectId ? ` ${opts.subjectId}` : ''}`,
+      { maxResults: opts.maxResults ?? env.RESEARCH_MAX_RESULTS },
+    );
+
+    const gradeLabel = opts.gradeId
+      ? opts.gradeId.replace('grade-', 'Grade ')
+      : 'K-12';
+    const subjectLabel = opts.subjectId ?? 'General';
+
+    const summary =
+      `This briefing covers "${opts.topic}" for ${gradeLabel} (${subjectLabel}). ` +
+      `It draws on ${sources.length} source(s) to give teachers a quick, evidence-based overview. ` +
+      (sources[0] ? `According to ${sources[0].siteName ?? 'a recent source'}: ${sources[0].snippet.slice(0, 200)}.` : '');
+
+    const keyPoints = sources.slice(0, 6).map((s, i) => {
+      const base = s.snippet.split(/[.!?]/)[0]?.trim() ?? s.title;
+      return `${i + 1}. ${base}.`;
+    });
+    // Always have at least 4 key points
+    while (keyPoints.length < 4) {
+      keyPoints.push(
+        `${keyPoints.length + 1}. Explore hands-on activities that make "${opts.topic}" tangible for ${gradeLabel} learners.`,
+      );
+    }
+
+    const outline = buildStubOutline(opts.topic, gradeLabel);
+
+    return {
+      topic: opts.topic,
+      gradeId: opts.gradeId ?? null,
+      subjectId: opts.subjectId ?? null,
+      summary,
+      keyPoints,
+      suggestedLessonOutline: outline,
+      sources,
+      provider: 'stub',
+      liveWeb: research.liveWeb,
+    };
+  }
+
   /** Extract notable words from text (simple frequency approach). */
   private _extractKeyTerms(text: string): string[] {
     const stopWords = new Set([
@@ -221,6 +285,43 @@ class StubLlmAdapter implements LlmAdapter {
       .map(([w]) => w)
       .slice(0, 20);
   }
+}
+
+// ─── Shared helpers ───────────────────────────────────────────────────────────
+
+/**
+ * Build a deterministic 3-section lesson outline for the given topic and grade.
+ * Used by both the stub LLM adapter and as a fallback in the Anthropic adapter.
+ */
+function buildStubOutline(topic: string, gradeLabel: string): LessonOutlineSection[] {
+  return [
+    {
+      title: 'Introduction & Prior Knowledge (10 min)',
+      points: [
+        `Ask students what they already know about "${topic}".`,
+        `Share a brief real-world example or story that connects to "${topic}".`,
+        `State the learning objectives in student-friendly language.`,
+      ],
+    },
+    {
+      title: `Core Concepts: ${topic} (25 min)`,
+      points: [
+        `Introduce key vocabulary and definitions relevant to "${topic}".`,
+        `Walk through 2–3 concrete examples appropriate for ${gradeLabel}.`,
+        `Check for understanding with quick think-pair-share prompts.`,
+        `Address common misconceptions identified in the research.`,
+      ],
+    },
+    {
+      title: 'Practice, Assessment & Wrap-Up (25 min)',
+      points: [
+        `Guided practice: students apply concepts via a short activity or worksheet.`,
+        `Independent or small-group task exploring "${topic}" further.`,
+        `Exit ticket: 2–3 questions to assess comprehension.`,
+        `Preview how "${topic}" connects to the next lesson.`,
+      ],
+    },
+  ];
 }
 
 // ─── Anthropic adapter (production) ───────────────────────────────────────────
@@ -365,6 +466,200 @@ ${opts.text.slice(0, 6000)}`;
         yield event.delta.text as string;
       }
     }
+  }
+
+  /**
+   * Agentic research loop using Anthropic tool use.
+   *
+   * Flow:
+   *  1. Send system prompt + user message with a `web_search` tool definition.
+   *  2. Model calls web_search 1-3 times; we execute each via the research adapter.
+   *  3. Model returns a final message containing strict JSON for the briefing.
+   *  4. Parse the JSON into ResearchBriefing; fall back to stub synthesis on parse failure.
+   *
+   * The loop is capped at 4 iterations to prevent runaway tool calls.
+   */
+  async researchTopic(opts: ResearchTopicOpts): Promise<ResearchBriefing> {
+    const research = getResearchAdapter();
+    const client = await this.clientPromise;
+    const maxResults = opts.maxResults ?? env.RESEARCH_MAX_RESULTS;
+    const gradeLabel = opts.gradeId ? opts.gradeId.replace('grade-', 'Grade ') : 'K-12';
+    const subjectLabel = opts.subjectId ?? 'General';
+
+    // Tool definition for Anthropic tool-use API
+    const tools: import('@anthropic-ai/sdk').default.Tool[] = [
+      {
+        name: 'web_search',
+        description:
+          'Search the web for educational information about a topic. Returns a list of relevant sources with titles, URLs, and snippets.',
+        input_schema: {
+          type: 'object' as const,
+          properties: {
+            query: {
+              type: 'string',
+              description: 'The search query to execute.',
+            },
+          },
+          required: ['query'],
+        },
+      },
+    ];
+
+    const systemPrompt = `You are a curriculum research assistant for K-12 teachers. \
+Your job is to research a topic thoroughly using the web_search tool, then synthesise a \
+teacher-ready briefing. The teacher works at the ${gradeLabel} level (subject: ${subjectLabel}).
+
+After gathering information with 1-3 web_search calls, respond ONLY with valid JSON \
+matching this exact structure (no markdown fences, no extra text):
+{
+  "summary": "<plain-language overview, 3-5 sentences>",
+  "keyPoints": ["<point 1>", "<point 2>", "<point 3>", "<point 4>", "<point 5>"],
+  "suggestedLessonOutline": [
+    {"title": "<section title>", "points": ["<point>", "<point>", "<point>"]},
+    {"title": "<section title>", "points": ["<point>", "<point>", "<point>"]},
+    {"title": "<section title>", "points": ["<point>", "<point>", "<point>"]}
+  ],
+  "sources": [
+    {"title": "<title>", "url": "<url>", "snippet": "<snippet>"}
+  ]
+}`;
+
+    type AnthropicMessage = import('@anthropic-ai/sdk').default.MessageParam;
+    const messages: AnthropicMessage[] = [
+      {
+        role: 'user',
+        content: `Please research the topic: "${opts.topic}" for ${gradeLabel} students (${subjectLabel}). Use the web_search tool to gather current, relevant information, then provide your structured briefing.`,
+      },
+    ];
+
+    // Collected sources from all tool calls
+    const allSources: import('@mentora/shared').ResearchSource[] = [];
+
+    let iterations = 0;
+    const MAX_ITERATIONS = 4;
+
+    try {
+      while (iterations < MAX_ITERATIONS) {
+        iterations++;
+
+        const response = await client.messages.create({
+          model: this.model,
+          max_tokens: 4096,
+          system: systemPrompt,
+          tools,
+          messages,
+        });
+
+        // Check for tool use blocks
+        const toolUseBlocks = response.content.filter((b) => b.type === 'tool_use');
+        const textBlocks = response.content.filter((b) => b.type === 'text');
+
+        if (toolUseBlocks.length === 0 || response.stop_reason === 'end_turn') {
+          // Model returned a final answer — extract JSON from text blocks
+          const textContent = textBlocks
+            .map((b) => (b.type === 'text' ? b.text : ''))
+            .join('');
+
+          try {
+            const match = textContent.match(/\{[\s\S]*\}/);
+            if (!match) throw new Error('No JSON object found in response');
+            const parsed = JSON.parse(match[0]) as {
+              summary?: string;
+              keyPoints?: string[];
+              suggestedLessonOutline?: LessonOutlineSection[];
+              sources?: import('@mentora/shared').ResearchSource[];
+            };
+
+            // Merge any sources from tool calls with those in the JSON
+            const jsonSources = parsed.sources ?? [];
+            const mergedSources = [...allSources];
+            for (const s of jsonSources) {
+              if (!mergedSources.find((m) => m.url === s.url)) {
+                mergedSources.push(s);
+              }
+            }
+            const finalSources = mergedSources.length > 0 ? mergedSources : allSources;
+
+            return {
+              topic: opts.topic,
+              gradeId: opts.gradeId ?? null,
+              subjectId: opts.subjectId ?? null,
+              summary: parsed.summary ?? `Research briefing for "${opts.topic}" (${gradeLabel}, ${subjectLabel}).`,
+              keyPoints: parsed.keyPoints ?? [],
+              suggestedLessonOutline: parsed.suggestedLessonOutline ?? buildStubOutline(opts.topic, gradeLabel),
+              sources: finalSources.slice(0, maxResults),
+              provider: `anthropic+${env.RESEARCH_DRIVER}`,
+              liveWeb: research.liveWeb,
+            };
+          } catch (parseErr) {
+            console.warn('[llm:anthropic] researchTopic JSON parse failed, falling back to stub synthesis:', parseErr);
+            break; // fall through to stub fallback
+          }
+        }
+
+        // Execute tool calls and add results to the conversation
+        // First, add the assistant message with tool use
+        messages.push({ role: 'assistant', content: response.content });
+
+        // Build tool results
+        const toolResults: import('@anthropic-ai/sdk').default.ToolResultBlockParam[] = [];
+
+        for (const block of toolUseBlocks) {
+          if (block.type !== 'tool_use') continue;
+          const input = block.input as { query?: string };
+          const query = input.query ?? opts.topic;
+
+          let sources: import('@mentora/shared').ResearchSource[] = [];
+          try {
+            sources = await research.search(query, { maxResults });
+          } catch (err) {
+            console.warn('[llm:anthropic] web_search tool execution failed:', err);
+            sources = [];
+          }
+
+          // Accumulate sources
+          for (const s of sources) {
+            if (!allSources.find((a) => a.url === s.url)) {
+              allSources.push(s);
+            }
+          }
+
+          const resultText = sources.length > 0
+            ? sources.map((s, i) =>
+                `[${i + 1}] ${s.title}\nURL: ${s.url}\nSnippet: ${s.snippet}${s.publishedAt ? `\nPublished: ${s.publishedAt}` : ''}`,
+              ).join('\n\n')
+            : 'No results found for this query.';
+
+          toolResults.push({
+            type: 'tool_result',
+            tool_use_id: block.id,
+            content: resultText,
+          });
+        }
+
+        // Add user message with tool results
+        messages.push({ role: 'user', content: toolResults });
+      }
+    } catch (err) {
+      console.error('[llm:anthropic] researchTopic loop error:', err);
+      // Fall through to stub synthesis
+    }
+
+    // Fallback: deterministic synthesis from collected sources (or fetch stub sources)
+    console.warn('[llm:anthropic] researchTopic falling back to stub synthesis');
+    const fallbackSources = allSources.length > 0
+      ? allSources
+      : await research.search(opts.topic, { maxResults });
+
+    const stub = new StubLlmAdapter();
+    // Use stub adapter's researchTopic but override provider
+    const fallback = await stub.researchTopic({ ...opts, maxResults });
+    return {
+      ...fallback,
+      sources: fallbackSources.length > 0 ? fallbackSources.slice(0, maxResults) : fallback.sources,
+      provider: `anthropic+${env.RESEARCH_DRIVER}`,
+      liveWeb: research.liveWeb,
+    };
   }
 }
 
