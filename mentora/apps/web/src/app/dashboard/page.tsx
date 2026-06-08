@@ -14,6 +14,7 @@ import {
   Clock,
   ArrowRight,
   Video,
+  Globe,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { sessionsApi, coursesApi, paymentsApi } from '@/lib/api';
@@ -186,6 +187,11 @@ function TeacherDashboard() {
           <Link href="/teach/sessions/new" className="no-underline">
             <Button variant="ghost" className="text-white hover:bg-white/10" icon={<Calendar size={18} />}>
               Schedule session
+            </Button>
+          </Link>
+          <Link href="/teach/research" className="no-underline">
+            <Button variant="ghost" className="text-white hover:bg-white/10" icon={<Globe size={18} />}>
+              Research a topic
             </Button>
           </Link>
         </div>

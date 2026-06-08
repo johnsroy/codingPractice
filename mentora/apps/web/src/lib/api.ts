@@ -16,6 +16,7 @@ import {
   type ClassSession,
   type VideoJoinTicket,
   type AiQuizQuestion,
+  type ResearchBriefing,
   type Paginated,
   type Subscription,
   type ApiError as ApiErrorType,
@@ -39,6 +40,7 @@ export type {
   ClassSession,
   VideoJoinTicket,
   AiQuizQuestion,
+  ResearchBriefing,
   Paginated,
   Subscription,
   RegisterInput,
@@ -315,6 +317,10 @@ export const aiApi = {
     if (token) qs.set('token', token); // pass token as query for SSE
     return new EventSource(`${BASE}${API_ROUTES.ai.tutorStream}?${qs}`);
   },
+
+  /** Agentic web research: searches the live web and returns a teacher-ready briefing. */
+  research: (input: { topic: string; gradeId?: string; subjectId?: string }) =>
+    request<ResearchBriefing>(API_ROUTES.ai.research, { method: 'POST', body: input }),
 };
 
 // ------------------------------------------------------------------ //

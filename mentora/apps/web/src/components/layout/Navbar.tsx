@@ -16,6 +16,7 @@ import {
   User,
   LogOut,
   Type,
+  Globe,
 } from 'lucide-react';
 import { BRAND } from '@mentora/shared';
 import { useAuth } from '@/lib/auth';
@@ -83,13 +84,27 @@ export function Navbar() {
           ))}
 
           {isAuthenticated && isTeacher && (
-            <Link
-              href="/teach/upload"
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold no-underline text-teal-600 hover:bg-teal-50 transition-colors"
-            >
-              <BookOpen size={18} aria-hidden="true" />
-              Teach
-            </Link>
+            <>
+              <Link
+                href="/teach/upload"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold no-underline text-teal-600 hover:bg-teal-50 transition-colors"
+              >
+                <BookOpen size={18} aria-hidden="true" />
+                Teach
+              </Link>
+              <Link
+                href="/teach/research"
+                className={clsx(
+                  'flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold no-underline transition-colors',
+                  pathname === '/teach/research'
+                    ? 'bg-brand-50 text-brand-600'
+                    : 'text-stone-600 hover:bg-surface-100 hover:text-stone-900',
+                )}
+              >
+                <Globe size={18} aria-hidden="true" />
+                Research
+              </Link>
+            </>
           )}
         </div>
 
@@ -166,6 +181,25 @@ export function Navbar() {
                 {link.label}
               </Link>
             ))}
+
+            {isAuthenticated && isTeacher && (
+              <div className="pt-2">
+                <Link
+                  href="/teach/research"
+                  onClick={() => setMobileOpen(false)}
+                  className={clsx(
+                    'flex items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold no-underline',
+                    'min-h-[52px] transition-colors',
+                    pathname === '/teach/research'
+                      ? 'bg-brand-50 text-brand-600'
+                      : 'text-stone-700 hover:bg-surface-100',
+                  )}
+                >
+                  <Globe size={20} aria-hidden="true" />
+                  Research a topic
+                </Link>
+              </div>
+            )}
 
             <div className="pt-4 border-t border-surface-200 flex flex-col gap-2">
               <button
