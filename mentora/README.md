@@ -28,6 +28,9 @@ decades of knowledge and time to give. Today's tutoring tools are built for
   classes, with materials and an AI tutor right beside the video.
 - **AI everywhere** — summarize, explain-for-a-Class-3-child, generate quizzes,
   draft lesson plans, grade answers, and an always-on tutor for learners.
+- **Agentic research** — a teacher types any new topic and Mentora's AI
+  **searches the live web** and synthesizes a teacher-ready briefing (summary,
+  key points, a suggested lesson, and cited sources).
 - **Get paid** — subscriptions for learners, pay-per-session coaching, and a
   transparent commission split so teachers always see what they earn.
 
@@ -94,8 +97,11 @@ production providers by setting environment variables — no code changes:
 | Storage    | local disk            | AWS S3                      | `STORAGE_DRIVER=s3` |
 | OCR        | Tesseract (local)     | AWS Textract                | `OCR_DRIVER=textract` |
 | GenAI/LLM  | deterministic stub    | Anthropic Claude / OpenAI   | `LLM_DRIVER=anthropic` |
+| Research   | example sources       | Tavily / Brave / SerpAPI (live web) | `RESEARCH_DRIVER=tavily` |
 | Video      | mock room + token     | LiveKit (low-latency WebRTC)| `VIDEO_DRIVER=livekit` |
 | Payments   | mock (auto-succeed)   | Stripe (Checkout + payouts) | `PAYMENTS_DRIVER=stripe` |
+
+**Docs:** [Architecture](docs/ARCHITECTURE.md) · [Deployment & API keys](docs/DEPLOYMENT.md) · [Testing](docs/TESTING.md) · [UAT checklist](docs/UAT_CHECKLIST.md) · [Roadmap](docs/ROADMAP.md) · [Agent orchestration](docs/ORCHESTRATION.md)
 
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full design and
 [`docs/ORCHESTRATION.md`](docs/ORCHESTRATION.md) for how an AI agent team built it.
