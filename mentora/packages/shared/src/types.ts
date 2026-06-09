@@ -221,6 +221,54 @@ export interface ConnectOnboardingLink {
   provider: 'mock' | 'stripe';
 }
 
+// ─── Teacher verification ──────────────────────────────────────────────────
+export type VerificationStatus = 'unverified' | 'pending' | 'verified' | 'rejected';
+
+/** Kinds of supporting documents a teacher uploads to prove they're legit + retired. */
+export type VerificationDocKind =
+  | 'government_id' // passport / driver's licence / Aadhaar
+  | 'retirement_proof' // pension card, retirement/superannuation letter, former-employer ID
+  | 'teaching_credential' // teaching licence, degree, B.Ed, professional certificate
+  | 'professional_membership' // membership of a professional body / council
+  | 'address_proof'
+  | 'other';
+
+export const VERIFICATION_DOC_KINDS: { id: VerificationDocKind; label: string; hint: string }[] = [
+  { id: 'government_id', label: 'Government photo ID', hint: 'Passport, driver’s licence, or Aadhaar' },
+  { id: 'retirement_proof', label: 'Proof of retirement', hint: 'Pension card, retirement letter, or former-employer ID' },
+  { id: 'teaching_credential', label: 'Teaching credential', hint: 'Teaching licence, degree, B.Ed or certificate' },
+  { id: 'professional_membership', label: 'Professional membership', hint: 'Council / professional-body membership (optional)' },
+  { id: 'address_proof', label: 'Address proof', hint: 'Utility bill or bank statement (optional)' },
+  { id: 'other', label: 'Other supporting document', hint: 'Anything else that supports your application' },
+];
+
+export interface VerificationDocument {
+  id: ID;
+  userId: ID;
+  kind: VerificationDocKind;
+  fileUrl: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: ISODateString;
+}
+
+/** A teacher's full verification picture (their own view + admin review view). */
+export interface VerificationSummary {
+  userId: ID;
+  status: VerificationStatus;
+  note?: string | null;
+  submittedAt?: ISODateString | null;
+  reviewedAt?: ISODateString | null;
+  documents: VerificationDocument[];
+  /** Which identity provider checked them, if any. */
+  provider: 'manual' | 'stripe_identity' | 'digilocker';
+  /** Teacher summary fields, present in the admin review list. */
+  teacherName?: string;
+  teacherEmail?: string;
+}
+
 export interface Paginated<T> {
   items: T[];
   total: number;

@@ -70,4 +70,14 @@ export const API_ROUTES = {
     connectOnboard: '/payments/connect/onboard', // start Stripe Connect onboarding
     connectStatus: '/payments/connect/status', // teacher payout-account status
   },
+
+  verification: {
+    status: '/verification/status', // GET own VerificationSummary (teacher)
+    documents: '/verification/documents', // POST a supporting doc (multipart)
+    submit: '/verification/submit', // POST submit for review
+    start: '/verification/start', // POST begin automated identity check (provider link)
+    // admin review queue
+    adminList: '/admin/verifications', // GET pending submissions
+    adminReview: (userId: string) => `/admin/verifications/${userId}`, // POST approve/reject
+  },
 } as const;

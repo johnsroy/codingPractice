@@ -99,6 +99,13 @@ model User {
   proTier         Boolean  @default(false)
   // Stripe Connect: the teacher's connected account id (for payouts).
   stripeAccountId String?
+  // Teacher verification workflow
+  verificationStatus      VerificationStatus @default(unverified)
+  verificationNote        String?
+  verificationProvider    String             @default("manual")
+  verificationSubmittedAt DateTime?
+  verificationReviewedAt  DateTime?
+  verificationDocuments   VerificationDocument[]
   // guardian linkage
   guardianId      String?
   guardian        User?    @relation("GuardianChildren", fields: [guardianId], references: [id])
@@ -253,6 +260,43 @@ model Subscription {
   provider         String             @default("mock")
   externalId       String?
   createdAt        DateTime           @default(now())
+
+  @@index([userId])
+}
+
+enum VerificationStatus {
+  unverified
+  pending
+  verified
+  rejected
+}
+
+enum VerificationDocKind {
+  government_id
+  retirement_proof
+  teaching_credential
+  professional_membership
+  address_proof
+  other
+}
+
+enum VerificationDocStatus {
+  pending
+  approved
+  rejected
+}
+
+model VerificationDocument {
+  id        String                @id @default(cuid())
+  userId    String
+  user      User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      VerificationDocKind   @default(other)
+  fileUrl   String
+  fileName  String
+  mimeType  String
+  sizeBytes Int                   @default(0)
+  status    VerificationDocStatus @default(pending)
+  createdAt DateTime              @default(now())
 
   @@index([userId])
 }

@@ -30,6 +30,9 @@ import {
   type CheckoutInput,
   type ConnectAccountStatus,
   type ConnectOnboardingLink,
+  type VerificationSummary,
+  type VerificationDocument,
+  type VerificationDocKind,
 } from '@mentora/shared';
 
 // Re-export for convenience in the rest of the app
@@ -55,6 +58,9 @@ export type {
   CheckoutInput,
   ConnectAccountStatus,
   ConnectOnboardingLink,
+  VerificationSummary,
+  VerificationDocument,
+  VerificationDocKind,
 };
 
 // ------------------------------------------------------------------ //
@@ -354,4 +360,49 @@ export const paymentsApi = {
 
   connectOnboard: () =>
     request<ConnectOnboardingLink>(API_ROUTES.payments.connectOnboard, { method: 'POST' }),
+};
+
+// ------------------------------------------------------------------ //
+// Teacher verification
+// ------------------------------------------------------------------ //
+
+export const verificationApi = {
+  /** The signed-in teacher's verification summary (status + documents). */
+  status: () => request<VerificationSummary>(API_ROUTES.verification.status),
+
+  /** Upload one supporting document (multipart: fields `file` + `kind`). */
+  uploadDocument: (kind: VerificationDocKind, file: File) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('kind', kind);
+    return request<VerificationDocument>(API_ROUTES.verification.documents, {
+      method: 'POST',
+      body: fd,
+      multipart: true,
+    });
+  },
+
+  /** Submit the uploaded documents for review. */
+  submit: (note?: string) =>
+    request<VerificationSummary>(API_ROUTES.verification.submit, {
+      method: 'POST',
+      body: { note },
+    }),
+
+  /** Begin an automated identity check (returns a provider link when configured). */
+  start: () =>
+    request<{ url: string | null; provider: string }>(API_ROUTES.verification.start, {
+      method: 'POST',
+    }),
+
+  /** Admin: list pending verification submissions. */
+  adminList: () =>
+    request<VerificationSummary[]>(API_ROUTES.verification.adminList),
+
+  /** Admin: approve or reject a teacher's submission. */
+  adminReview: (userId: string, decision: 'approve' | 'reject', note?: string) =>
+    request<VerificationSummary>(API_ROUTES.verification.adminReview(userId), {
+      method: 'POST',
+      body: { decision, note },
+    }),
 };
