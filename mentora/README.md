@@ -4,6 +4,8 @@
 
 ### Where a lifetime of expertise becomes the next generation's head start.
 
+[![Mentora CI](https://github.com/johnsroy/codingPractice/actions/workflows/ci.yml/badge.svg)](https://github.com/johnsroy/codingPractice/actions/workflows/ci.yml)
+
 **Mentora** is a web + mobile learning platform where **retired and seasoned
 professionals teach children grades 1–12** — through self-paced courses, live
 group classrooms, and paid 1:1 coaching. OCR turns any worksheet into a lesson,
