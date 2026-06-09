@@ -97,6 +97,8 @@ model User {
   verified        Boolean  @default(false)
   rating          Float?
   proTier         Boolean  @default(false)
+  // Stripe Connect: the teacher's connected account id (for payouts).
+  stripeAccountId String?
   // guardian linkage
   guardianId      String?
   guardian        User?    @relation("GuardianChildren", fields: [guardianId], references: [id])

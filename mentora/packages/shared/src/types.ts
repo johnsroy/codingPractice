@@ -197,6 +197,30 @@ export interface Subscription {
   provider: 'mock' | 'stripe';
 }
 
+/**
+ * A teacher's payout (Stripe Connect) account status. Teachers must complete
+ * onboarding before they can receive payouts to their bank account.
+ */
+export interface ConnectAccountStatus {
+  /** A connected account exists for this teacher. */
+  connected: boolean;
+  /** The teacher finished the onboarding form. */
+  detailsSubmitted: boolean;
+  /** Stripe will pay out to their bank. */
+  payoutsEnabled: boolean;
+  /** The account can accept charges. */
+  chargesEnabled: boolean;
+  /** True once payouts are fully enabled. */
+  onboardingComplete: boolean;
+  provider: 'mock' | 'stripe';
+}
+
+/** Returned by the onboarding endpoint: where to send the teacher to finish setup. */
+export interface ConnectOnboardingLink {
+  url: string;
+  provider: 'mock' | 'stripe';
+}
+
 export interface Paginated<T> {
   items: T[];
   total: number;

@@ -67,5 +67,7 @@ export const API_ROUTES = {
     webhook: '/payments/webhook',
     subscription: '/payments/subscription',
     earnings: '/payments/earnings', // teacher payout summary
+    connectOnboard: '/payments/connect/onboard', // start Stripe Connect onboarding
+    connectStatus: '/payments/connect/status', // teacher payout-account status
   },
 } as const;
