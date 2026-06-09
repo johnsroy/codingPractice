@@ -10,6 +10,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/lib/auth';
 import { AccessibilityProvider } from '@/lib/accessibility';
 import { ToastProvider } from '@/components/ui/Toast';
+import { LanguageProvider } from '@/i18n';
 
 // Create a stable QueryClient (one per browser session)
 const queryClient = new QueryClient({
@@ -25,13 +26,15 @@ const queryClient = new QueryClient({
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
-      <AccessibilityProvider>
-        <AuthProvider>
-          <ToastProvider>
-            {children}
-          </ToastProvider>
-        </AuthProvider>
-      </AccessibilityProvider>
+      <LanguageProvider>
+        <AccessibilityProvider>
+          <AuthProvider>
+            <ToastProvider>
+              {children}
+            </ToastProvider>
+          </AuthProvider>
+        </AccessibilityProvider>
+      </LanguageProvider>
     </QueryClientProvider>
   );
 }

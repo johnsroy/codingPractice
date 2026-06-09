@@ -21,31 +21,26 @@ import {
 import { BRAND } from '@mentora/shared';
 import { useAuth } from '@/lib/auth';
 import { useAccessibility } from '@/lib/accessibility';
+import { useT } from '@/i18n';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
-
-interface NavLink {
-  href: string;
-  label: string;
-  icon: React.ReactNode;
-  authRequired?: boolean;
-  roles?: string[];
-  guestOnly?: boolean;
-}
-
-const navLinks: NavLink[] = [
-  { href: '/teachers', label: 'Find a Teacher', icon: <Users size={18} /> },
-  { href: '/courses', label: 'Courses', icon: <BookOpen size={18} /> },
-  { href: '/pricing', label: 'Pricing', icon: <GraduationCap size={18} /> },
-  { href: '/tutor', label: 'AI Tutor', icon: <Bot size={18} />, authRequired: true },
-  { href: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} />, authRequired: true },
-];
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 
 export function Navbar() {
   const { user, isAuthenticated, logout, isTeacher } = useAuth();
   const { toggleFontSize, isLarge } = useAccessibility();
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const t = useT();
+
+  // Nav links built inside the component so they pick up translations
+  const navLinks = [
+    { href: '/teachers', label: t('nav.findTeacher'), icon: <Users size={18} />, authRequired: false },
+    { href: '/courses', label: t('nav.courses'), icon: <BookOpen size={18} />, authRequired: false },
+    { href: '/pricing', label: t('nav.pricing'), icon: <GraduationCap size={18} />, authRequired: false },
+    { href: '/tutor', label: t('nav.aiTutor'), icon: <Bot size={18} />, authRequired: true },
+    { href: '/dashboard', label: t('nav.dashboard'), icon: <LayoutDashboard size={18} />, authRequired: true },
+  ];
 
   const visibleLinks = navLinks.filter((link) => {
     if (link.authRequired && !isAuthenticated) return false;
@@ -90,7 +85,7 @@ export function Navbar() {
                 className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold no-underline text-teal-600 hover:bg-teal-50 transition-colors"
               >
                 <BookOpen size={18} aria-hidden="true" />
-                Teach
+                {t('nav.teach')}
               </Link>
               <Link
                 href="/teach/research"
@@ -102,7 +97,7 @@ export function Navbar() {
                 )}
               >
                 <Globe size={18} aria-hidden="true" />
-                Research
+                {t('nav.research')}
               </Link>
             </>
           )}
@@ -110,12 +105,15 @@ export function Navbar() {
 
         {/* Right side */}
         <div className="hidden md:flex items-center gap-3">
+          {/* Language switcher */}
+          <LanguageSwitcher />
+
           {/* Accessibility: text size toggle */}
           <button
             onClick={toggleFontSize}
             className="p-2 rounded-lg text-stone-500 hover:bg-surface-100 hover:text-stone-700 transition-colors min-h-[40px] min-w-[40px] flex items-center justify-center"
-            aria-label={isLarge ? 'Switch to normal text size' : 'Switch to larger text size'}
-            title={isLarge ? 'Normal text' : 'Larger text'}
+            aria-label={isLarge ? t('nav.switchToNormal') : t('nav.switchToLarger')}
+            title={isLarge ? t('nav.normalText') : t('nav.largerText')}
           >
             <Type size={18} />
             {isLarge && <span className="ml-1 text-xs font-bold text-brand-600">A+</span>}
@@ -129,21 +127,21 @@ export function Navbar() {
               <button
                 onClick={logout}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold text-stone-500 hover:text-red-600 hover:bg-red-50 transition-colors"
-                aria-label="Sign out"
+                aria-label={t('nav.signOut')}
               >
                 <LogOut size={17} aria-hidden="true" />
-                Sign out
+                {t('nav.signOut')}
               </button>
             </div>
           ) : (
             <>
               <Link href="/login" className="no-underline">
                 <Button variant="ghost" size="sm" icon={<LogIn size={17} />}>
-                  Sign in
+                  {t('nav.signIn')}
                 </Button>
               </Link>
               <Link href="/signup" className="no-underline">
-                <Button size="sm">Get started free</Button>
+                <Button size="sm">{t('nav.getStartedFree')}</Button>
               </Link>
             </>
           )}
@@ -154,7 +152,7 @@ export function Navbar() {
           className="md:hidden p-2 rounded-lg text-stone-600 hover:bg-surface-100 transition-colors min-h-[48px] min-w-[48px] flex items-center justify-center"
           onClick={() => setMobileOpen((o) => !o)}
           aria-expanded={mobileOpen}
-          aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+          aria-label={mobileOpen ? t('nav.closeMenu') : t('nav.openMenu')}
         >
           {mobileOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
@@ -196,18 +194,23 @@ export function Navbar() {
                   )}
                 >
                   <Globe size={20} aria-hidden="true" />
-                  Research a topic
+                  {t('nav.researchATopic')}
                 </Link>
               </div>
             )}
 
             <div className="pt-4 border-t border-surface-200 flex flex-col gap-2">
+              {/* Language switcher — mobile */}
+              <div className="flex items-center gap-3 px-4 py-1">
+                <LanguageSwitcher />
+              </div>
+
               <button
                 onClick={() => { toggleFontSize(); setMobileOpen(false); }}
                 className="flex items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold text-stone-600 hover:bg-surface-100 transition-colors min-h-[52px]"
               >
                 <Type size={20} aria-hidden="true" />
-                {isLarge ? 'Normal text size' : 'Larger text size'}
+                {isLarge ? t('nav.normalTextSize') : t('nav.largerTextSize')}
               </button>
 
               {isAuthenticated ? (
@@ -218,23 +221,23 @@ export function Navbar() {
                     className="flex items-center gap-3 px-4 py-3 rounded-xl no-underline text-base font-semibold text-stone-700 hover:bg-surface-100 transition-colors min-h-[52px]"
                   >
                     <User size={20} aria-hidden="true" />
-                    My Account
+                    {t('nav.myAccount')}
                   </Link>
                   <button
                     onClick={() => { logout(); setMobileOpen(false); }}
                     className="flex items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold text-red-600 hover:bg-red-50 transition-colors min-h-[52px]"
                   >
                     <LogOut size={20} aria-hidden="true" />
-                    Sign out
+                    {t('nav.signOut')}
                   </button>
                 </>
               ) : (
                 <>
                   <Link href="/login" onClick={() => setMobileOpen(false)} className="no-underline">
-                    <Button variant="outline" fullWidth icon={<LogIn size={18} />}>Sign in</Button>
+                    <Button variant="outline" fullWidth icon={<LogIn size={18} />}>{t('nav.signIn')}</Button>
                   </Link>
                   <Link href="/signup" onClick={() => setMobileOpen(false)} className="no-underline">
-                    <Button fullWidth>Get started free</Button>
+                    <Button fullWidth>{t('nav.getStartedFree')}</Button>
                   </Link>
                 </>
               )}
