@@ -36,6 +36,7 @@ async function main() {
   await prisma.classSession.deleteMany();
   await prisma.lesson.deleteMany();
   await prisma.course.deleteMany();
+  await prisma.verificationDocument.deleteMany();
   await prisma.refreshToken.deleteMany();
   await prisma.user.deleteMany();
 
@@ -161,6 +162,56 @@ async function main() {
 
   console.log(`  ✓ ${teachers.length} teachers created`);
   const [margaret, james, eleanor, robert, patricia, amelia] = teachers;
+
+  // ─── Teacher verification data ────────────────────────────────────────────────
+  // Margaret: already verified (legacy boolean + new verificationStatus)
+  await prisma.user.update({
+    where: { id: margaret.id },
+    data: {
+      verificationStatus: 'verified',
+      verified: true,
+      verificationProvider: 'manual',
+      verificationSubmittedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
+      verificationReviewedAt: new Date(Date.now() - 28 * 24 * 60 * 60 * 1000), // 28 days ago
+      verificationNote: 'Teaching credentials and MIT appointment letter verified.',
+    },
+  });
+
+  // Amelia: pending review — uploaded two documents so admin review queue has data
+  await prisma.user.update({
+    where: { id: amelia.id },
+    data: {
+      verificationStatus: 'pending',
+      verificationProvider: 'manual',
+      verificationSubmittedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
+      verificationNote: 'Please review my University of Chicago appointment letter and retirement confirmation.',
+    },
+  });
+
+  await prisma.verificationDocument.createMany({
+    data: [
+      {
+        userId: amelia.id,
+        kind: 'teaching_credential',
+        fileUrl: 'https://example.com/placeholder/amelia-uchicago-appointment.pdf',
+        fileName: 'uchicago-appointment.pdf',
+        mimeType: 'application/pdf',
+        sizeBytes: 184320,
+        status: 'pending',
+      },
+      {
+        userId: amelia.id,
+        kind: 'retirement_proof',
+        fileUrl: 'https://example.com/placeholder/amelia-retirement-letter.pdf',
+        fileName: 'retirement-letter.pdf',
+        mimeType: 'application/pdf',
+        sizeBytes: 102400,
+        status: 'pending',
+      },
+    ],
+  });
+
+  console.log('  ✓ Verification data created (margaret=verified, amelia=pending with 2 docs)');
 
   // ─── Courses ─────────────────────────────────────────────────────────────────
   const courses = await Promise.all([
@@ -604,6 +655,7 @@ async function main() {
     prisma.classSession.count(),
     prisma.enrollment.count(),
     prisma.payment.count(),
+    prisma.verificationDocument.count(),
   ]);
 
   console.log('\n' + '─'.repeat(60));
@@ -611,6 +663,7 @@ async function main() {
   console.log(`   Users: ${counts[0]} | Courses: ${counts[1]} | Lessons: ${counts[2]}`);
   console.log(`   Materials: ${counts[3]} | Sessions: ${counts[4]}`);
   console.log(`   Enrollments: ${counts[5]} | Payments: ${counts[6]}`);
+  console.log(`   Verification docs: ${counts[7]} (amelia: 2 pending, margaret: verified)`);
   console.log('─'.repeat(60));
   console.log('\n🔑 Demo Credentials (all passwords: Password123!)\n');
   console.log('  Role      | Email');

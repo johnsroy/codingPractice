@@ -29,12 +29,13 @@ paymentsRouter.post(
   authenticate,
   validate(checkoutSchema),
   asyncHandler(async (req, res) => {
-    const { kind, planId, sessionId, courseId, interval } = req.body as {
+    const { kind, planId, sessionId, courseId, interval, currency } = req.body as {
       kind: 'subscription' | 'session' | 'course';
       planId?: string;
       sessionId?: string;
       courseId?: string;
       interval?: 'month' | 'year';
+      currency?: 'USD' | 'CAD' | 'INR';
     };
 
     const adapter = getPaymentsAdapter();
@@ -44,6 +45,7 @@ paymentsRouter.post(
       sessionId,
       courseId,
       interval,
+      currency,
       userId: req.user!.sub,
       userEmail: req.user!.email,
     });

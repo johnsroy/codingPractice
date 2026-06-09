@@ -25,6 +25,8 @@ export interface CheckoutInput {
   sessionId?: string;
   courseId?: string;
   interval?: 'month' | 'year';
+  /** Display/charge currency. Defaults to 'USD'. */
+  currency?: 'USD' | 'CAD' | 'INR';
   userId: string;
   userEmail: string;
 }
@@ -78,6 +80,8 @@ export interface PaymentsAdapter {
 
 class MockPaymentsAdapter implements PaymentsAdapter {
   async createCheckout(input: CheckoutInput): Promise<CheckoutResult> {
+    const currency = input.currency ?? 'USD';
+
     if (input.kind === 'subscription') {
       const planId = input.planId ?? 'explorer';
       const plan = getPlan(planId);
@@ -116,7 +120,7 @@ class MockPaymentsAdapter implements PaymentsAdapter {
           data: {
             payerId: input.userId,
             amountCents,
-            currency: 'USD',
+            currency,
             kind: 'subscription',
             status: 'succeeded',
             provider: 'mock',
@@ -167,7 +171,7 @@ class MockPaymentsAdapter implements PaymentsAdapter {
         data: {
           payerId: input.userId,
           amountCents: session.priceCents,
-          currency: 'USD',
+          currency,
           kind: 'session',
           status: 'succeeded',
           provider: 'mock',
@@ -218,7 +222,7 @@ class MockPaymentsAdapter implements PaymentsAdapter {
         data: {
           payerId: input.userId,
           amountCents: course.priceCents,
-          currency: 'USD',
+          currency,
           kind: 'course',
           status: 'succeeded',
           provider: 'mock',
@@ -328,6 +332,8 @@ class StripePaymentsAdapter implements PaymentsAdapter {
 
   async createCheckout(input: CheckoutInput): Promise<CheckoutResult> {
     const stripe = await this.stripePromise;
+    // Normalise to lowercase for Stripe's currency field (Stripe expects 'usd', 'cad', 'inr')
+    const stripeCurrency = (input.currency ?? 'USD').toLowerCase();
 
     if (input.kind === 'subscription') {
       const plan = getPlan(input.planId ?? 'explorer');
@@ -377,7 +383,7 @@ class StripePaymentsAdapter implements PaymentsAdapter {
         line_items: [
           {
             price_data: {
-              currency: 'usd',
+              currency: stripeCurrency,
               unit_amount: session.priceCents,
               product_data: { name: session.title },
             },
@@ -427,7 +433,7 @@ class StripePaymentsAdapter implements PaymentsAdapter {
         line_items: [
           {
             price_data: {
-              currency: 'usd',
+              currency: stripeCurrency,
               unit_amount: course.priceCents,
               product_data: { name: course.title },
             },
