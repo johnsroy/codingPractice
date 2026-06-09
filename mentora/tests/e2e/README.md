@@ -24,14 +24,14 @@ npm run db:migrate     # applies Prisma migrations
 npm run db:seed        # inserts demo users, courses, sessions, etc.
 ```
 
-Seeded demo accounts (all use password `Password123!`):
+Seeded demo accounts (password `Password123!`, except admin: `Admin@1234!`):
 
-| Role     | Email                        |
-|----------|------------------------------|
-| Teacher  | margaret.chen@mentora.app    |
-| Student  | student@mentora.app          |
-| Guardian | david.park@example.com       |
-| Admin    | admin@mentora.app            |
+| Role     | Email                        | Password       |
+|----------|------------------------------|----------------|
+| Teacher  | margaret.chen@mentora.app    | `Password123!` |
+| Student  | student@mentora.app          | `Password123!` |
+| Guardian | david.park@example.com       | `Password123!` |
+| Admin    | admin@mentora.app            | `Admin@1234!`  |
 
 ### 3. Start the API and web servers
 

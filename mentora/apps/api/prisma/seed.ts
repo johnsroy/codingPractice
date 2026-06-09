@@ -665,10 +665,10 @@ async function main() {
   console.log(`   Enrollments: ${counts[5]} | Payments: ${counts[6]}`);
   console.log(`   Verification docs: ${counts[7]} (amelia: 2 pending, margaret: verified)`);
   console.log('─'.repeat(60));
-  console.log('\n🔑 Demo Credentials (all passwords: Password123!)\n');
+  console.log('\n🔑 Demo Credentials (passwords: Password123! — except ADMIN: Admin@1234!)\n');
   console.log('  Role      | Email');
   console.log('  ----------|----------------------------------------------');
-  console.log('  ADMIN     | admin@mentora.app');
+  console.log('  ADMIN     | admin@mentora.app           (password: Admin@1234!)');
   console.log('  TEACHER   | margaret.chen@mentora.app   (Pro Tier, Math)');
   console.log('  TEACHER   | james.okafor@mentora.app    (Pro Tier, Science)');
   console.log('  TEACHER   | eleanor.vasquez@mentora.app (Standard, English)');

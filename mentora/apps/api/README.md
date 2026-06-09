@@ -178,7 +178,7 @@ After running `npm run db:seed`:
 
 | Role | Email | Password |
 |---|---|---|
-| ADMIN | admin@mentora.app | Password123! |
+| ADMIN | admin@mentora.app | Admin@1234! |
 | TEACHER (Pro) | margaret.chen@mentora.app | Password123! |
 | TEACHER (Pro) | james.okafor@mentora.app | Password123! |
 | TEACHER | eleanor.vasquez@mentora.app | Password123! |

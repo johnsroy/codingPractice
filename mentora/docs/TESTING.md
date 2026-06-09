@@ -9,11 +9,21 @@ team (see [`ORCHESTRATION.md`](ORCHESTRATION.md)). All suites are currently
 | Layer        | Package          | Tooling                         | Tests | Status |
 |--------------|------------------|---------------------------------|-------|--------|
 | Unit         | `@mentora/shared`| Vitest                          | 285   | ✅ pass |
-| Component    | `@mentora/web`   | Vitest + React Testing Library  | 123   | ✅ pass |
-| Integration  | `@mentora/api`   | Vitest + supertest + Postgres   | 74    | ✅ pass |
-| End-to-end   | `@mentora/e2e`   | Playwright (Chromium)           | 43    | ✅ pass |
+| Component    | `@mentora/web`   | Vitest + React Testing Library  | 192   | ✅ pass |
+| Integration  | `@mentora/api`   | Vitest + supertest + Postgres   | 129   | ✅ pass |
+| End-to-end   | `@mentora/e2e`   | Playwright (Chromium)           | 64    | ✅ pass |
 | UAT          | `docs/uat`       | Human persona scripts           | —     | ready  |
-| **Total automated** |          |                                 | **525** | ✅ |
+| **Total automated** |          |                                 | **670** | ✅ |
+
+> Counts are the totals at the time of writing and will grow as features land.
+
+## Continuous integration
+
+CI (`.github/workflows/ci.yml`) runs the **full pyramid on every PR** and on
+pushes to main: unit + component, API integration against a real Postgres
+(including the teacher **verification** and **currency** suites), and the
+Playwright e2e suite against the running web + api stack (including the
+agentic **research** flow and smoke tests). A failing layer blocks the merge.
 
 ## Running the suites
 

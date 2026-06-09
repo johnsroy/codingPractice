@@ -135,13 +135,17 @@ describe('FeaturedTeachers', () => {
     });
   });
 
-  it('renders placeholder skeletons when API returns an empty array', async () => {
+  it('renders a friendly empty state when API returns an empty array', async () => {
     vi.mocked(usersApi.teachers).mockResolvedValue([]);
-    const { container } = render(<FeaturedTeachers />, { wrapper: queryWrapper() });
-    await waitFor(() => {
-      const pulses = container.querySelectorAll('.animate-pulse');
-      expect(pulses.length).toBeGreaterThan(0);
-    });
+    render(<FeaturedTeachers />, { wrapper: queryWrapper() });
+    await waitFor(() =>
+      expect(screen.getByText(/our mentors are getting ready/i)).toBeInTheDocument(),
+    );
+    // Empty state links visitors to the full teacher directory
+    expect(screen.getByRole('link', { name: /browse all teachers/i })).toHaveAttribute(
+      'href',
+      '/teachers',
+    );
   });
 
   it('renders at most 6 teacher cards', async () => {
