@@ -2,9 +2,17 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
-import { Save, User, Mail, CreditCard, Type, CheckCircle2, Banknote } from 'lucide-react';
+import {
+  Save,
+  User,
+  Mail,
+  CreditCard,
+  Type,
+  CheckCircle2,
+  Banknote,
+  ShieldCheck,
+} from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-// SUBJECTS/GRADES/formatPrice available from @mentora/shared if needed for extensions
 import { usersApi, paymentsApi, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useAccessibility } from '@/lib/accessibility';
@@ -18,6 +26,7 @@ import { Tabs } from '@/components/ui/Tabs';
 import { PageSpinner, Spinner } from '@/components/ui/Spinner';
 import { useToast } from '@/components/ui/Toast';
 import { PayoutsSection } from '@/components/features/PayoutsSection';
+import { VerificationSection } from '@/components/features/VerificationSection';
 import clsx from 'clsx';
 
 export default function AccountPage() {
@@ -43,7 +52,7 @@ export default function AccountPage() {
       user.hourlyRateCents != null ? (user.hourlyRateCents / 100).toFixed(0) : '',
     );
     setYearsExp(user.yearsExperience?.toString() ?? '');
-  }, [user?.id]);
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auth guard
   useEffect(() => {
@@ -86,7 +95,10 @@ export default function AccountPage() {
     { id: 'profile', label: 'Profile', icon: <User size={16} /> },
     { id: 'subscription', label: 'Subscription', icon: <CreditCard size={16} /> },
     ...(isTeacher
-      ? [{ id: 'payouts', label: 'Payouts', icon: <Banknote size={16} /> }]
+      ? [
+          { id: 'payouts', label: 'Payouts', icon: <Banknote size={16} /> },
+          { id: 'verification', label: 'Verification', icon: <ShieldCheck size={16} /> },
+        ]
       : []),
     { id: 'accessibility', label: 'Accessibility', icon: <Type size={16} /> },
   ];
@@ -94,26 +106,43 @@ export default function AccountPage() {
   return (
     <div className="section">
       <div className="page-container max-w-3xl">
-        {/* Header */}
-        <div className="flex items-center gap-5 mb-10">
-          <Avatar src={user?.avatarUrl} name={user?.name} size="xl" />
-          <div>
-            <h1 className="text-stone-900">{user?.name}</h1>
-            <p className="text-stone-500">{user?.email}</p>
-            <div className="flex gap-2 mt-2">
-              <Badge variant="brand" size="sm">{user?.role}</Badge>
-              {user?.verified && <Badge variant="green" size="sm">Verified</Badge>}
-              {user?.proTier && <Badge variant="teal" size="sm">Mentor Pro</Badge>}
+
+        {/* ── Hero header ── */}
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-900 via-brand-800 to-teal-800 p-8 mb-10 text-white shadow-lift">
+          {/* Decorative blobs */}
+          <span className="blob w-56 h-56 bg-brand-400/20 -top-16 -right-16" aria-hidden="true" />
+          <span className="blob w-40 h-40 bg-teal-400/20 bottom-0 left-0" aria-hidden="true" />
+
+          <div className="relative flex items-center gap-5">
+            <Avatar src={user?.avatarUrl} name={user?.name} size="xl" className="ring-4 ring-white/30" />
+            <div className="flex-1 min-w-0">
+              <h1 className="text-white text-3xl mb-0.5">{user?.name}</h1>
+              <p className="text-brand-200 text-sm">{user?.email}</p>
+              <div className="flex flex-wrap gap-2 mt-3">
+                <Badge variant="outline" size="sm" className="border-white/40 text-white bg-white/10">
+                  {user?.role}
+                </Badge>
+                {user?.verified && (
+                  <Badge variant="green" size="sm">
+                    <CheckCircle2 size={11} /> Verified
+                  </Badge>
+                )}
+                {user?.proTier && <Badge variant="teal" size="sm">Mentor Pro</Badge>}
+              </div>
             </div>
           </div>
         </div>
 
+        {/* ── Tab navigation ── */}
         <Tabs tabs={tabs} defaultTab="profile">
           {(activeTab) => (
             <>
-              {/* Profile tab */}
+              {/* ── Profile tab ── */}
               {activeTab === 'profile' && (
-                <Card padding="lg">
+                <Card padding="lg" className="card-lift">
+                  <div className="flex items-center gap-2 mb-6">
+                    <span className="eyebrow"><User size={14} aria-hidden="true" /> Your details</span>
+                  </div>
                   <form onSubmit={handleSave} className="space-y-5">
                     <Input
                       label="Full name"
@@ -176,15 +205,18 @@ export default function AccountPage() {
                 </Card>
               )}
 
-              {/* Subscription tab */}
+              {/* ── Subscription tab ── */}
               {activeTab === 'subscription' && (
                 <div className="space-y-6">
                   {subscription ? (
-                    <Card padding="lg">
+                    <Card padding="lg" className="card-lift">
+                      <div className="flex items-center gap-2 mb-6">
+                        <span className="eyebrow"><CreditCard size={14} aria-hidden="true" /> Billing</span>
+                      </div>
                       <div className="flex items-start justify-between mb-5">
                         <div>
-                          <h2 className="text-xl font-bold text-stone-900">Current plan</h2>
-                          <Badge variant="brand" size="md" className="mt-2">{subscription.planId}</Badge>
+                          <h2 className="text-2xl mb-2">Current plan</h2>
+                          <Badge variant="brand" size="md" className="mt-1">{subscription.planId}</Badge>
                         </div>
                         <Badge
                           variant={subscription.status === 'active' ? 'green' : 'amber'}
@@ -194,16 +226,16 @@ export default function AccountPage() {
                         </Badge>
                       </div>
 
-                      <div className="space-y-3 text-stone-600">
-                        <div className="flex justify-between">
+                      <div className="space-y-3 text-ink-700">
+                        <div className="flex justify-between py-2 border-b border-surface-100">
                           <span>Billing provider</span>
-                          <span className="font-semibold text-stone-800 capitalize">
+                          <span className="font-semibold text-ink-900 capitalize">
                             {subscription.provider}
                           </span>
                         </div>
-                        <div className="flex justify-between">
+                        <div className="flex justify-between py-2">
                           <span>Renews</span>
-                          <span className="font-semibold text-stone-800">
+                          <span className="font-semibold text-ink-900">
                             {new Date(subscription.currentPeriodEnd).toLocaleDateString('en-US', {
                               year: 'numeric', month: 'long', day: 'numeric',
                             })}
@@ -218,10 +250,12 @@ export default function AccountPage() {
                       </div>
                     </Card>
                   ) : (
-                    <Card padding="lg" className="text-center">
-                      <CreditCard size={48} className="text-stone-300 mx-auto mb-4" />
-                      <h2 className="text-xl font-bold text-stone-900 mb-2">No active plan</h2>
-                      <p className="text-stone-500 mb-6">
+                    <Card padding="lg" className="card-lift text-center">
+                      <div className="w-16 h-16 rounded-full bg-brand-50 flex items-center justify-center mx-auto mb-4">
+                        <CreditCard size={28} className="text-brand-400" aria-hidden="true" />
+                      </div>
+                      <h2 className="text-2xl mb-2">No active plan</h2>
+                      <p className="text-ink-700 mb-6">
                         Upgrade to unlock unlimited classrooms, AI tutoring and more.
                       </p>
                       <Button onClick={() => router.push('/pricing')}>
@@ -232,36 +266,54 @@ export default function AccountPage() {
                 </div>
               )}
 
-              {/* Payouts tab (teachers only) */}
+              {/* ── Payouts tab (teachers only) ── */}
               {activeTab === 'payouts' && isTeacher && (
                 <div className="space-y-6">
-                  <div>
-                    <h2 className="text-xl font-bold text-stone-900 mb-1">Get paid</h2>
-                    <p className="text-stone-500 mb-6">
-                      Connect your bank account so Mentora can send your earnings straight to you.
-                    </p>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="eyebrow"><Banknote size={14} aria-hidden="true" /> Earnings & payouts</span>
                   </div>
+                  <h2 className="text-2xl mb-1">Get paid</h2>
+                  <p className="text-ink-700 mb-6">
+                    Connect your bank account so Mentora can send your earnings straight to you.
+                  </p>
                   <Suspense fallback={<Spinner size="sm" label="Loading payout status…" />}>
                     <PayoutsSection />
                   </Suspense>
                 </div>
               )}
 
-              {/* Accessibility tab */}
+              {/* ── Verification tab (teachers only) ── */}
+              {activeTab === 'verification' && isTeacher && (
+                <div className="space-y-6">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="eyebrow"><ShieldCheck size={14} aria-hidden="true" /> Identity verification</span>
+                  </div>
+                  <h2 className="text-2xl mb-1">Verify your identity</h2>
+                  <p className="text-ink-700 mb-6">
+                    A verified badge builds trust with families and unlocks priority placement in search.
+                  </p>
+                  <VerificationSection />
+                </div>
+              )}
+
+              {/* ── Accessibility tab ── */}
               {activeTab === 'accessibility' && (
-                <Card padding="lg">
-                  <h2 className="text-xl font-bold text-stone-900 mb-6">Accessibility settings</h2>
+                <Card padding="lg" className="card-lift">
+                  <div className="flex items-center gap-2 mb-6">
+                    <span className="eyebrow"><Type size={14} aria-hidden="true" /> Display preferences</span>
+                  </div>
+                  <h2 className="text-2xl mb-6">Accessibility settings</h2>
 
                   <div className="space-y-6">
                     {/* Text size */}
-                    <div className="flex items-center justify-between p-5 rounded-2xl border-2 border-surface-200">
+                    <div className="flex items-center justify-between p-5 rounded-2xl border-2 border-surface-200 bg-surface-50">
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-xl bg-brand-50 flex items-center justify-center">
-                          <Type size={24} className="text-brand-500" />
+                          <Type size={24} className="text-brand-500" aria-hidden="true" />
                         </div>
                         <div>
-                          <p className="font-bold text-stone-900">Larger text</p>
-                          <p className="text-sm text-stone-500">
+                          <p className="font-bold text-ink-900">Larger text</p>
+                          <p className="text-sm text-ink-700">
                             Increases all text by 25% for easier reading.
                           </p>
                         </div>
@@ -287,8 +339,8 @@ export default function AccountPage() {
                     </div>
 
                     {/* Current status */}
-                    <div className="flex items-center gap-3 text-sm text-stone-600">
-                      <CheckCircle2 size={18} className="text-teal-500" />
+                    <div className="flex items-center gap-3 text-sm text-ink-700">
+                      <CheckCircle2 size={18} className="text-teal-500" aria-hidden="true" />
                       Text size is currently{' '}
                       <strong>{fontSize === 'large' ? 'large (22.5px base)' : 'normal (18px base)'}</strong>.
                     </div>
@@ -302,4 +354,3 @@ export default function AccountPage() {
     </div>
   );
 }
-

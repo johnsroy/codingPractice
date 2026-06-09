@@ -46,7 +46,8 @@ export default function NewSessionPage() {
 
   function validate() {
     const e: Record<string, string> = {};
-    if (!title.trim() || title.trim().length < 2) e.title = 'Title must be at least 2 characters.';
+    if (!title.trim() || title.trim().length < 2)
+      e.title = 'Title must be at least 2 characters.';
     if (!startsAt) e.startsAt = 'Please choose a start time.';
     else if (new Date(startsAt) < new Date()) e.startsAt = 'Start time must be in the future.';
     return e;
@@ -60,7 +61,7 @@ export default function NewSessionPage() {
 
     setSubmitting(true);
     try {
-      const session = await sessionsApi.create({
+      await sessionsApi.create({
         kind,
         title: title.trim(),
         startsAt: new Date(startsAt).toISOString(),
@@ -84,41 +85,62 @@ export default function NewSessionPage() {
   return (
     <div className="section">
       <div className="page-container max-w-2xl">
-        <h1 className="text-stone-900 mb-3">Schedule a session</h1>
-        <p className="text-xl text-stone-500 mb-10">
-          Create a group classroom or a private 1:1 coaching slot.
-        </p>
+        {/* ── Header ── */}
+        <div className="animate-fade-up mb-8">
+          <p className="eyebrow mb-3"><Calendar size={14} /> Session scheduler</p>
+          <h1 className="text-ink-900 mb-2">Schedule a session</h1>
+          <p className="text-xl text-ink-700">
+            Create a group classroom or a private 1:1 coaching slot.
+          </p>
+        </div>
 
-        <Card padding="lg">
+        <Card padding="lg" className="card-lift">
           <form onSubmit={handleSubmit} noValidate className="space-y-6">
-            {/* Kind selector */}
+            {/* ── Session type selector ── */}
             <div>
-              <p className="text-sm font-semibold text-stone-700 mb-3">Session type</p>
+              <p className="text-sm font-semibold text-ink-900 mb-3">Session type</p>
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { kind: 'classroom', icon: <Users size={24} />, title: 'Group classroom', desc: 'Teach multiple students at once' },
-                  { kind: 'one_on_one', icon: <User size={24} />, title: '1:1 Coaching', desc: 'Private personal session' },
+                  {
+                    kind: 'classroom',
+                    icon: <Users size={24} />,
+                    title: 'Group classroom',
+                    desc: 'Teach multiple students at once',
+                  },
+                  {
+                    kind: 'one_on_one',
+                    icon: <User size={24} />,
+                    title: '1:1 Coaching',
+                    desc: 'Private personal session',
+                  },
                 ].map((opt) => (
                   <button
                     key={opt.kind}
                     type="button"
                     onClick={() => setKind(opt.kind as SessionKind)}
                     className={clsx(
-                      'flex flex-col items-center gap-2 p-5 rounded-xl border-2 transition-all cursor-pointer',
+                      'flex flex-col items-center gap-2 p-5 rounded-2xl border-2 transition-all cursor-pointer',
                       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500',
                       kind === opt.kind
                         ? 'border-brand-500 bg-brand-50'
-                        : 'border-surface-200 hover:border-stone-300',
+                        : 'border-surface-200 hover:border-brand-300 hover:bg-surface-50',
                     )}
                     aria-pressed={kind === opt.kind}
                   >
-                    <span className={kind === opt.kind ? 'text-brand-500' : 'text-stone-400'}>
+                    <span
+                      className={kind === opt.kind ? 'text-brand-500' : 'text-stone-400'}
+                      aria-hidden="true"
+                    >
                       {opt.icon}
                     </span>
-                    <span className={`text-sm font-bold ${kind === opt.kind ? 'text-brand-700' : 'text-stone-700'}`}>
+                    <span
+                      className={`text-sm font-bold ${
+                        kind === opt.kind ? 'text-brand-700' : 'text-ink-900'
+                      }`}
+                    >
                       {opt.title}
                     </span>
-                    <span className="text-xs text-stone-500 text-center">{opt.desc}</span>
+                    <span className="text-xs text-ink-700 text-center">{opt.desc}</span>
                   </button>
                 ))}
               </div>
@@ -152,11 +174,11 @@ export default function NewSessionPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-semibold text-stone-700 mb-1.5">
+                <label className="block text-sm font-semibold text-ink-900 mb-1.5">
                   Price per student (USD) — 0 = free
                 </label>
                 <div className="flex items-center gap-2">
-                  <span className="text-stone-500 font-bold">$</span>
+                  <span className="text-ink-700 font-bold">$</span>
                   <input
                     type="number"
                     min={0}
@@ -170,7 +192,7 @@ export default function NewSessionPage() {
 
               {kind === 'classroom' && (
                 <div>
-                  <label className="block text-sm font-semibold text-stone-700 mb-1.5">
+                  <label className="block text-sm font-semibold text-ink-900 mb-1.5">
                     Max students
                   </label>
                   <input
@@ -186,7 +208,13 @@ export default function NewSessionPage() {
             </div>
 
             <div className="flex gap-4 pt-2">
-              <Button type="submit" size="lg" loading={submitting} icon={<Calendar size={18} />} iconEnd={<ArrowRight size={18} />}>
+              <Button
+                type="submit"
+                size="lg"
+                loading={submitting}
+                icon={<Calendar size={18} />}
+                iconEnd={<ArrowRight size={18} />}
+              >
                 Schedule session
               </Button>
               <Button type="button" variant="ghost" size="lg" onClick={() => router.back()}>

@@ -43,8 +43,8 @@ test.describe('Sign up — new learner', () => {
       page.getByRole('heading', { name: /Create your free account/i }),
     ).toBeVisible();
 
-    // Select the "I want to learn" role (it's aria-pressed)
-    const learnBtn = page.getByRole('button', { name: /I want to learn/i });
+    // Select the "Learner" role (it's aria-pressed)
+    const learnBtn = page.getByRole('button', { name: /Learner/i });
     await expect(learnBtn).toBeVisible();
     await learnBtn.click();
     await expect(learnBtn).toHaveAttribute('aria-pressed', 'true');

@@ -95,53 +95,60 @@ export default function ManageCoursePage() {
   return (
     <div className="section">
       <div className="page-container">
+        {/* ── Back link ── */}
         <Link
           href="/dashboard"
-          className="inline-flex items-center gap-2 text-stone-500 hover:text-brand-600 no-underline mb-8 font-medium"
+          className="inline-flex items-center gap-2 text-ink-700 hover:text-brand-600 no-underline mb-8 font-medium"
         >
           <ArrowLeft size={18} />
           Dashboard
         </Link>
 
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-6 mb-10">
-          <div>
-            <div className="flex flex-wrap gap-2 mb-3">
-              {subjectLabel && <Badge variant="brand">{subjectLabel}</Badge>}
-              {gradeLabel && <Badge variant="teal">{gradeLabel}</Badge>}
-              <Badge variant={course.status === 'published' ? 'green' : course.status === 'draft' ? 'amber' : 'stone'}>
-                {course.status}
-              </Badge>
+        {/* ── Course header ── */}
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-50 to-teal-50 border border-surface-200 p-8 mb-10 shadow-soft">
+          <span className="blob w-48 h-48 bg-brand-200/30 -top-12 -right-12" aria-hidden="true" />
+          <div className="relative flex flex-col sm:flex-row sm:items-start sm:justify-between gap-6">
+            <div>
+              <div className="flex flex-wrap gap-2 mb-3">
+                {subjectLabel && <Badge variant="brand">{subjectLabel}</Badge>}
+                {gradeLabel && <Badge variant="teal">{gradeLabel}</Badge>}
+                <Badge
+                  variant={
+                    course.status === 'published'
+                      ? 'green'
+                      : course.status === 'draft'
+                      ? 'amber'
+                      : 'stone'
+                  }
+                >
+                  {course.status}
+                </Badge>
+              </div>
+              <h1 className="text-ink-900">{course.title}</h1>
+              <p className="text-ink-700 mt-2">{course.description}</p>
             </div>
-            <h1 className="text-stone-900">{course.title}</h1>
-            <p className="text-stone-500 mt-2">{course.description}</p>
-          </div>
 
-          <div className="flex gap-3 shrink-0">
-            {course.status === 'draft' && (
-              <Button
-                onClick={handlePublish}
-                loading={publishLoading}
-                icon={<Send size={18} />}
-              >
-                Publish course
-              </Button>
-            )}
-            {course.status === 'published' && (
-              <Link href={`/courses/${id}`} className="no-underline">
-                <Button variant="outline">View live</Button>
-              </Link>
-            )}
+            <div className="flex gap-3 shrink-0">
+              {course.status === 'draft' && (
+                <Button onClick={handlePublish} loading={publishLoading} icon={<Send size={18} />}>
+                  Publish course
+                </Button>
+              )}
+              {course.status === 'published' && (
+                <Link href={`/courses/${id}`} className="no-underline">
+                  <Button variant="outline">View live</Button>
+                </Link>
+              )}
+            </div>
           </div>
         </div>
 
+        {/* ── Content grid ── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-          {/* Lessons */}
+          {/* Lessons column */}
           <div className="lg:col-span-2">
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-2xl font-bold text-stone-900">
-                Lessons ({lessons?.length ?? 0})
-              </h2>
+              <h2 className="text-2xl">Lessons ({lessons?.length ?? 0})</h2>
               <Button
                 size="sm"
                 icon={<PlusCircle size={16} />}
@@ -161,15 +168,19 @@ export default function ManageCoursePage() {
             ) : (
               <div className="space-y-3">
                 {lessons!.map((lesson, idx) => (
-                  <Card key={lesson.id} padding="md" className="flex items-center gap-4">
-                    <GripVertical size={20} className="text-stone-300 cursor-grab shrink-0" aria-hidden="true" />
+                  <Card key={lesson.id} padding="md" className="card-lift flex items-center gap-4">
+                    <GripVertical
+                      size={20}
+                      className="text-stone-300 cursor-grab shrink-0"
+                      aria-hidden="true"
+                    />
                     <div className="w-9 h-9 rounded-xl bg-brand-50 flex items-center justify-center shrink-0 font-bold text-brand-500 text-sm">
                       {idx + 1}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-stone-800">{lesson.title}</p>
+                      <p className="font-semibold text-ink-900">{lesson.title}</p>
                       {lesson.summary && (
-                        <p className="text-sm text-stone-500 mt-0.5 line-clamp-1">{lesson.summary}</p>
+                        <p className="text-sm text-ink-700 mt-0.5 line-clamp-1">{lesson.summary}</p>
                       )}
                     </div>
                   </Card>
@@ -178,12 +189,14 @@ export default function ManageCoursePage() {
             )}
           </div>
 
-          {/* Materials */}
+          {/* Materials column */}
           <div>
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-xl font-bold text-stone-900">Materials</h2>
+              <h2 className="text-xl">Materials</h2>
               <Link href="/teach/upload" className="no-underline">
-                <Button size="sm" variant="outline" icon={<PlusCircle size={16} />}>Upload</Button>
+                <Button size="sm" variant="outline" icon={<PlusCircle size={16} />}>
+                  Upload
+                </Button>
               </Link>
             </div>
 
@@ -198,11 +211,17 @@ export default function ManageCoursePage() {
               <div className="space-y-3">
                 {materials!.map((m) => (
                   <Card key={m.id} padding="sm" className="flex items-center gap-3">
-                    <FileText size={18} className="text-brand-400 shrink-0" />
+                    <FileText size={18} className="text-brand-400 shrink-0" aria-hidden="true" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-stone-800 truncate">{m.title}</p>
+                      <p className="text-sm font-semibold text-ink-900 truncate">{m.title}</p>
                       <Badge
-                        variant={m.ocrStatus === 'done' ? 'teal' : m.ocrStatus === 'processing' ? 'amber' : 'stone'}
+                        variant={
+                          m.ocrStatus === 'done'
+                            ? 'teal'
+                            : m.ocrStatus === 'processing'
+                            ? 'amber'
+                            : 'stone'
+                        }
                         size="sm"
                       >
                         {m.ocrStatus}
@@ -216,12 +235,8 @@ export default function ManageCoursePage() {
         </div>
       </div>
 
-      {/* Add lesson modal */}
-      <Modal
-        open={addLessonOpen}
-        onClose={() => setAddLessonOpen(false)}
-        title="Add a lesson"
-      >
+      {/* ── Add lesson modal ── */}
+      <Modal open={addLessonOpen} onClose={() => setAddLessonOpen(false)} title="Add a lesson">
         <div className="space-y-4">
           <Input
             label="Lesson title"
@@ -245,7 +260,7 @@ export default function ManageCoursePage() {
                 addLessonMutation.mutate({
                   courseId: id,
                   title: lessonTitle.trim(),
-                  order: (lessons?.length ?? 0),
+                  order: lessons?.length ?? 0,
                   summary: lessonSummary || undefined,
                 });
               }}

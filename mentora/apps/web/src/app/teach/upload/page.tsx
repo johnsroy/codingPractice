@@ -2,7 +2,15 @@
 
 import React, { useCallback, useRef, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Upload, FileText, CheckCircle2, AlertCircle, Clock, X, Sparkles } from 'lucide-react';
+import {
+  Upload,
+  FileText,
+  CheckCircle2,
+  AlertCircle,
+  Clock,
+  X,
+  Sparkles,
+} from 'lucide-react';
 import clsx from 'clsx';
 import { materialsApi } from '@/lib/api';
 import type { Material } from '@/lib/api';
@@ -30,7 +38,10 @@ interface UploadedFile {
 
 function OcrStatusBadge({ status }: { status?: OcrStatus }) {
   if (!status || status === 'skipped') return null;
-  const configs: Record<OcrStatus, { label: string; variant: 'amber' | 'teal' | 'brand' | 'red' | 'stone' }> = {
+  const configs: Record<
+    OcrStatus,
+    { label: string; variant: 'amber' | 'teal' | 'brand' | 'red' | 'stone' }
+  > = {
     pending: { label: 'Queued', variant: 'stone' },
     processing: { label: 'Processing…', variant: 'amber' },
     done: { label: 'Text extracted', variant: 'teal' },
@@ -107,18 +118,14 @@ export default function UploadMaterialPage() {
       const material = await materialsApi.upload(formData);
       setFiles((prev) =>
         prev.map((f) =>
-          f.id === tempId
-            ? { ...f, material, ocrStatus: material.ocrStatus }
-            : f,
+          f.id === tempId ? { ...f, material, ocrStatus: material.ocrStatus } : f,
         ),
       );
       success(`${file.name} uploaded!`);
     } catch {
       setFiles((prev) =>
         prev.map((f) =>
-          f.id === tempId
-            ? { ...f, error: 'Upload failed. Please try again.' }
-            : f,
+          f.id === tempId ? { ...f, error: 'Upload failed. Please try again.' } : f,
         ),
       );
     }
@@ -137,6 +144,7 @@ export default function UploadMaterialPage() {
       setDragOver(false);
       if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
 
@@ -145,21 +153,31 @@ export default function UploadMaterialPage() {
   return (
     <div className="section">
       <div className="page-container max-w-3xl">
-        <h1 className="text-stone-900 mb-3">Upload course materials</h1>
-        <p className="text-xl text-stone-500 mb-10">
-          Drop your PDFs, images, or docs here. Our AI will read them and create a summary — no typing required.
-        </p>
+        {/* ── Header ── */}
+        <div className="animate-fade-up mb-10">
+          <p className="eyebrow mb-3"><Upload size={14} /> Material library</p>
+          <h1 className="text-ink-900 mb-3">Upload course materials</h1>
+          <p className="text-xl text-ink-700">
+            Drop your PDFs, images, or docs here. Our AI will read them and create a
+            summary — no typing required.
+          </p>
+        </div>
 
-        {/* Drop zone */}
+        {/* ── Drop zone ── */}
         <div
           role="button"
           tabIndex={0}
           aria-label="Upload files — click or drag and drop"
           onDrop={onDrop}
-          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragOver(true);
+          }}
           onDragLeave={() => setDragOver(false)}
           onClick={() => fileInputRef.current?.click()}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') fileInputRef.current?.click(); }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') fileInputRef.current?.click();
+          }}
           className={clsx(
             'border-4 border-dashed rounded-3xl p-14 text-center cursor-pointer transition-all',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500',
@@ -176,10 +194,10 @@ export default function UploadMaterialPage() {
             )}
             aria-hidden="true"
           />
-          <p className="text-xl font-bold text-stone-700 mb-2">
+          <p className="text-xl font-bold text-ink-900 mb-2">
             {dragOver ? 'Drop your files here' : 'Drag & drop, or click to browse'}
           </p>
-          <p className="text-stone-400">
+          <p className="text-ink-700">
             PDF, Word, images, video, audio · Up to {MAX_SIZE_MB}MB each
           </p>
 
@@ -194,26 +212,26 @@ export default function UploadMaterialPage() {
           />
         </div>
 
-        {/* Uploaded files */}
+        {/* ── Uploaded files list ── */}
         {files.length > 0 && (
           <div className="mt-10 space-y-4">
-            <h2 className="text-lg font-semibold text-stone-800">Your uploads</h2>
+            <h2 className="text-lg font-semibold text-ink-900">Your uploads</h2>
             {files.map((f) => (
-              <Card key={f.id} padding="md">
+              <Card key={f.id} padding="md" className="card-lift">
                 <div className="flex items-start gap-4">
                   <div className="w-10 h-10 rounded-xl bg-brand-50 flex items-center justify-center shrink-0">
                     {f.error ? (
-                      <AlertCircle size={20} className="text-red-400" />
+                      <AlertCircle size={20} className="text-red-400" aria-hidden="true" />
                     ) : f.ocrStatus === 'done' ? (
-                      <CheckCircle2 size={20} className="text-teal-500" />
+                      <CheckCircle2 size={20} className="text-teal-500" aria-hidden="true" />
                     ) : (
-                      <FileText size={20} className="text-brand-400" />
+                      <FileText size={20} className="text-brand-400" aria-hidden="true" />
                     )}
                   </div>
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 flex-wrap">
-                      <p className="font-semibold text-stone-800 truncate">{f.name}</p>
+                      <p className="font-semibold text-ink-900 truncate">{f.name}</p>
                       {f.error ? (
                         <Badge variant="red" size="sm">Failed</Badge>
                       ) : !f.material ? (
@@ -224,7 +242,7 @@ export default function UploadMaterialPage() {
                     </div>
 
                     {f.error && (
-                      <p className="text-sm text-red-600 mt-1">{f.error}</p>
+                      <p className="text-sm text-red-600 mt-1" role="alert">{f.error}</p>
                     )}
 
                     {/* AI Summary */}
@@ -234,7 +252,7 @@ export default function UploadMaterialPage() {
                           <Sparkles size={16} aria-hidden="true" />
                           AI Summary
                         </p>
-                        <p className="text-sm text-stone-700 leading-relaxed">{f.aiSummary}</p>
+                        <p className="text-sm text-ink-700 leading-relaxed">{f.aiSummary}</p>
                       </div>
                     )}
 
@@ -244,7 +262,7 @@ export default function UploadMaterialPage() {
                         <summary className="text-sm text-brand-600 cursor-pointer hover:underline font-medium">
                           View extracted text
                         </summary>
-                        <pre className="mt-2 text-xs bg-surface-100 rounded-xl p-4 whitespace-pre-wrap text-stone-700 max-h-48 overflow-y-auto">
+                        <pre className="mt-2 text-xs bg-surface-100 rounded-xl p-4 whitespace-pre-wrap text-ink-700 max-h-48 overflow-y-auto">
                           {f.extractedText}
                         </pre>
                       </details>
@@ -252,8 +270,12 @@ export default function UploadMaterialPage() {
 
                     {/* Processing spinner */}
                     {(f.ocrStatus === 'pending' || f.ocrStatus === 'processing') && (
-                      <div className="mt-3 flex items-center gap-2 text-sm text-stone-500">
-                        <Clock size={16} className="animate-spin text-amber-500" />
+                      <div className="mt-3 flex items-center gap-2 text-sm text-ink-700">
+                        <Clock
+                          size={16}
+                          className="animate-spin text-amber-500"
+                          aria-hidden="true"
+                        />
                         Extracting text and generating summary…
                       </div>
                     )}
@@ -261,7 +283,7 @@ export default function UploadMaterialPage() {
 
                   <button
                     onClick={() => setFiles((prev) => prev.filter((p) => p.id !== f.id))}
-                    className="p-1.5 rounded-lg text-stone-300 hover:text-stone-600 hover:bg-surface-100 transition-colors"
+                    className="p-1.5 rounded-lg text-stone-300 hover:text-stone-600 hover:bg-surface-100 transition-colors min-h-[40px] min-w-[40px] flex items-center justify-center"
                     aria-label={`Remove ${f.name}`}
                   >
                     <X size={18} />
@@ -280,6 +302,34 @@ export default function UploadMaterialPage() {
                 </Button>
               </div>
             )}
+          </div>
+        )}
+
+        {/* ── Tips ── */}
+        {files.length === 0 && (
+          <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {[
+              {
+                icon: <FileText size={20} className="text-brand-400" />,
+                tip: 'Upload PDFs, Word docs, or images. Our AI extracts text automatically.',
+              },
+              {
+                icon: <Sparkles size={20} className="text-teal-400" />,
+                tip: 'Each upload gets an AI summary you can use as lesson notes.',
+              },
+              {
+                icon: <CheckCircle2 size={20} className="text-accent-500" />,
+                tip: 'Attach materials to any lesson so students have everything in one place.',
+              },
+            ].map((t, i) => (
+              <div
+                key={i}
+                className="flex gap-3 p-4 bg-surface-50 rounded-xl border border-surface-200"
+              >
+                <span className="shrink-0 mt-0.5" aria-hidden="true">{t.icon}</span>
+                <p className="text-sm text-ink-700">{t.tip}</p>
+              </div>
+            ))}
           </div>
         )}
       </div>
