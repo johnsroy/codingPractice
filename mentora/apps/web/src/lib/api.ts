@@ -28,6 +28,8 @@ import {
   type CreateSessionInput,
   type AiRequestInput,
   type CheckoutInput,
+  type ConnectAccountStatus,
+  type ConnectOnboardingLink,
 } from '@mentora/shared';
 
 // Re-export for convenience in the rest of the app
@@ -51,6 +53,8 @@ export type {
   CreateSessionInput,
   AiRequestInput,
   CheckoutInput,
+  ConnectAccountStatus,
+  ConnectOnboardingLink,
 };
 
 // ------------------------------------------------------------------ //
@@ -344,4 +348,10 @@ export const paymentsApi = {
       commissionPct: number;
       currency: string;
     }>(API_ROUTES.payments.earnings),
+
+  connectStatus: () =>
+    request<ConnectAccountStatus>(API_ROUTES.payments.connectStatus),
+
+  connectOnboard: () =>
+    request<ConnectOnboardingLink>(API_ROUTES.payments.connectOnboard, { method: 'POST' }),
 };

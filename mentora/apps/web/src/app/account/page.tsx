@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
-import { Save, User, Mail, CreditCard, Type, CheckCircle2 } from 'lucide-react';
+import { Save, User, Mail, CreditCard, Type, CheckCircle2, Banknote } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 // SUBJECTS/GRADES/formatPrice available from @mentora/shared if needed for extensions
 import { usersApi, paymentsApi, ApiError } from '@/lib/api';
@@ -15,8 +15,9 @@ import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Avatar } from '@/components/ui/Avatar';
 import { Tabs } from '@/components/ui/Tabs';
-import { PageSpinner } from '@/components/ui/Spinner';
+import { PageSpinner, Spinner } from '@/components/ui/Spinner';
 import { useToast } from '@/components/ui/Toast';
+import { PayoutsSection } from '@/components/features/PayoutsSection';
 import clsx from 'clsx';
 
 export default function AccountPage() {
@@ -84,6 +85,9 @@ export default function AccountPage() {
   const tabs = [
     { id: 'profile', label: 'Profile', icon: <User size={16} /> },
     { id: 'subscription', label: 'Subscription', icon: <CreditCard size={16} /> },
+    ...(isTeacher
+      ? [{ id: 'payouts', label: 'Payouts', icon: <Banknote size={16} /> }]
+      : []),
     { id: 'accessibility', label: 'Accessibility', icon: <Type size={16} /> },
   ];
 
@@ -225,6 +229,21 @@ export default function AccountPage() {
                       </Button>
                     </Card>
                   )}
+                </div>
+              )}
+
+              {/* Payouts tab (teachers only) */}
+              {activeTab === 'payouts' && isTeacher && (
+                <div className="space-y-6">
+                  <div>
+                    <h2 className="text-xl font-bold text-stone-900 mb-1">Get paid</h2>
+                    <p className="text-stone-500 mb-6">
+                      Connect your bank account so Mentora can send your earnings straight to you.
+                    </p>
+                  </div>
+                  <Suspense fallback={<Spinner size="sm" label="Loading payout status…" />}>
+                    <PayoutsSection />
+                  </Suspense>
                 </div>
               )}
 

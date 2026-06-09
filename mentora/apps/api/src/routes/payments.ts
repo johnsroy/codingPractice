@@ -13,6 +13,7 @@ import { validate } from '../middleware/validate';
 import { asyncHandler } from '../middleware/asyncHandler';
 import { authenticate, requireRole } from '../middleware/auth';
 import { getPaymentsAdapter } from '../adapters/payments';
+import { prisma } from '../lib/prisma';
 import { env } from '../config/env';
 
 export const paymentsRouter = Router();
@@ -87,5 +88,57 @@ paymentsRouter.get(
       commissionPct,
       currency: 'USD',
     });
+  }),
+);
+
+// POST /payments/connect/onboard — start Stripe Connect onboarding (TEACHER only)
+paymentsRouter.post(
+  '/connect/onboard',
+  authenticate,
+  requireRole('TEACHER'),
+  asyncHandler(async (req, res) => {
+    const teacher = await prisma.user.findUniqueOrThrow({
+      where: { id: req.user!.sub },
+      select: { id: true, email: true, name: true, stripeAccountId: true },
+    });
+
+    const adapter = getPaymentsAdapter();
+    const { link, stripeAccountId } = await adapter.createConnectOnboarding({
+      id: teacher.id,
+      email: teacher.email,
+      name: teacher.name,
+      stripeAccountId: teacher.stripeAccountId,
+    });
+
+    // Persist the (possibly new) connected account id on the user record.
+    if (stripeAccountId !== teacher.stripeAccountId) {
+      await prisma.user.update({
+        where: { id: teacher.id },
+        data: { stripeAccountId },
+      });
+    }
+
+    res.json(link);
+  }),
+);
+
+// GET /payments/connect/status — Stripe Connect account status (TEACHER only)
+paymentsRouter.get(
+  '/connect/status',
+  authenticate,
+  requireRole('TEACHER'),
+  asyncHandler(async (req, res) => {
+    const teacher = await prisma.user.findUniqueOrThrow({
+      where: { id: req.user!.sub },
+      select: { id: true, stripeAccountId: true },
+    });
+
+    const adapter = getPaymentsAdapter();
+    const status = await adapter.getConnectStatus({
+      id: teacher.id,
+      stripeAccountId: teacher.stripeAccountId,
+    });
+
+    res.json(status);
   }),
 );

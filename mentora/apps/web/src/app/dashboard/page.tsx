@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
@@ -22,8 +22,9 @@ import { formatPrice } from '@mentora/shared';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { PageSpinner } from '@/components/ui/Spinner';
+import { PageSpinner, Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { PayoutsSection } from '@/components/features/PayoutsSection';
 
 function SessionCard({ session }: { session: import('@/lib/api').ClassSession }) {
   const router = useRouter();
@@ -223,6 +224,13 @@ function TeacherDashboard() {
           </Card>
         </div>
       )}
+
+      {/* Payout status — compact row below earnings */}
+      <Card padding="md">
+        <Suspense fallback={<Spinner size="sm" label="Loading payout status…" />}>
+          <PayoutsSection compact />
+        </Suspense>
+      </Card>
 
       {/* Upcoming sessions */}
       <div>
