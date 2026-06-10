@@ -32,6 +32,7 @@ import { sessionsRouter } from './routes/sessions';
 import { aiRouter } from './routes/ai';
 import { paymentsRouter } from './routes/payments';
 import { verificationRouter } from './routes/verification';
+import { geoRouter } from './routes/geo';
 
 // ─── App factory ──────────────────────────────────────────────────────────────
 
@@ -108,6 +109,8 @@ export function createApp(): express.Application {
   // Verification routes are mounted at /api directly because their paths
   // already include /verification/* and /admin/verifications*.
   app.use('/api', verificationRouter);
+  // Geo detection (no auth) — mounted at /api so the route resolves to /api/geo.
+  app.use('/api', geoRouter);
 
   // ─── 404 handler ──────────────────────────────────────────────────────────────
 

@@ -10,6 +10,7 @@ import {
 import {
   LEARNER_PLANS,
   TEACHER_PLANS,
+  CURRENCIES,
   formatPrice,
   COMMISSION,
   splitEarnings,
@@ -181,7 +182,7 @@ function PlanCard({
 
 export default function PricingPage() {
   const [annual, setAnnual] = useState(false);
-  const [currency, setCurrency] = useCurrencyState();
+  const { currency, setCurrency, detected } = useCurrencyState();
 
   // Earnings calculator
   const [grossInput, setGrossInput] = useState(500);
@@ -245,6 +246,20 @@ export default function PricingPage() {
             {/* Currency switcher */}
             <CurrencySwitcher value={currency} onChange={setCurrency} />
           </div>
+
+          {/* Regional pricing note */}
+          {(() => {
+            const detectedMeta = CURRENCIES.find((c) => c.code === detected);
+            return detectedMeta ? (
+              <p className="text-sm text-ink-700 mt-5 animate-fade-up delay-200 opacity-80">
+                Prices shown in{' '}
+                <strong className="font-semibold text-ink-900">
+                  {detectedMeta.flag} {detectedMeta.code}
+                </strong>
+                {' '}— adjusted for your region.
+              </p>
+            ) : null;
+          })()}
         </div>
       </section>
 

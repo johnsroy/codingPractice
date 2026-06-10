@@ -1,7 +1,8 @@
 /**
  * LLM Adapter
  * -----------
- * Powers AI features: summarisation, quiz generation, tutor chat, lesson plans, grading.
+ * Powers AI features: summarisation, quiz generation, tutor chat, lesson plans, grading,
+ * and Study Kit generation.
  * Implementations:
  *   - "stub"      (default) — deterministic heuristic responses; fully demoable with zero keys.
  *   - "anthropic" (production) — claude-sonnet-4-6 via @anthropic-ai/sdk, streaming capable.
@@ -11,7 +12,7 @@
  * with a warning so the server never fails to start.
  */
 
-import type { AiQuizQuestion, ResearchBriefing, LessonOutlineSection } from '@mentora/shared';
+import type { AiQuizQuestion, ResearchBriefing, LessonOutlineSection, StudyKit } from '@mentora/shared';
 import { env } from '../../config/env';
 import { getResearchAdapter } from '../research';
 
@@ -31,11 +32,25 @@ export interface LessonPlanOpts {
 
 export type TutorMessage = { role: 'user' | 'assistant'; content: string };
 
+export interface TutorReplyOpts {
+  messages: TutorMessage[];
+  language?: string;
+  subjectId?: string;
+  gradeId?: string;
+  materialText?: string;
+}
+
 export interface ResearchTopicOpts {
   topic: string;
   gradeId?: string;
   subjectId?: string;
   maxResults?: number;
+}
+
+export interface StudyKitOpts {
+  text: string;
+  gradeId?: string;
+  subjectId?: string;
 }
 
 export interface LlmAdapter {
@@ -57,10 +72,10 @@ export interface LlmAdapter {
   lessonPlan(opts: LessonPlanOpts): Promise<string>;
 
   /**
-   * Multi-turn tutor reply. Returns the full reply string.
-   * For streaming, use the stream* variant exposed by the route layer.
+   * Multi-turn tutor reply with context. Returns the full reply string.
+   * For streaming, use the stream* variant.
    */
-  tutorReply(messages: TutorMessage[]): Promise<string>;
+  tutorReply(opts: TutorReplyOpts): Promise<string>;
 
   /**
    * Grade a student's written answer against the expected answer.
@@ -77,20 +92,106 @@ export interface LlmAdapter {
    * Stream tutor reply tokens to an async iterable of string chunks.
    * Stub yields the full reply in one chunk; real drivers stream tokens.
    */
-  streamTutorReply(messages: TutorMessage[]): AsyncIterable<string>;
+  streamTutorReply(opts: TutorReplyOpts): AsyncIterable<string>;
 
   /**
    * Agentic research: searches the web (via the research adapter) and
    * synthesises a teacher-ready ResearchBriefing with citations.
-   *
-   * Anthropic driver: runs a real tool-use loop where the model issues
-   * web_search tool calls, results are fed back, and the model then returns
-   * structured JSON for the briefing.
-   *
-   * Stub driver: deterministically synthesises a useful briefing from the
-   * research adapter's (stub or real) results without an LLM call.
    */
   researchTopic(opts: ResearchTopicOpts): Promise<ResearchBriefing>;
+
+  /**
+   * Generate a full AI Study Kit from material text:
+   * summary, keyTerms, flashcards, quiz.
+   */
+  generateStudyKit(opts: StudyKitOpts): Promise<StudyKit>;
+}
+
+// ─── Locale greeting helper ───────────────────────────────────────────────────
+
+function localeGreeting(language?: string): string {
+  if (!language) return '';
+  const lang = language.toLowerCase().split('-')[0];
+  const greetings: Record<string, string> = {
+    hi: 'नमस्ते! ',
+    pa: 'ਸਤਿ ਸ੍ਰੀ ਅਕਾਲ! ',
+    bn: 'নমস্কার! ',
+    ur: 'السلام علیکم! ',
+    ta: 'வணக்கம்! ',
+    te: 'నమస్కారం! ',
+    mr: 'नमस्कार! ',
+    gu: 'નમસ્તે! ',
+  };
+  return greetings[lang] ?? '';
+}
+
+// ─── Grade label helper ───────────────────────────────────────────────────────
+
+function gradeLabel(gradeId?: string): string {
+  if (!gradeId) return 'K-12';
+  const n = parseInt(gradeId.replace('grade-', ''), 10);
+  if (isNaN(n)) return gradeId;
+  if (n <= 2) return 'early elementary (Grades 1-2)';
+  if (n <= 5) return 'elementary (Grades 3-5)';
+  if (n <= 8) return 'middle school (Grades 6-8)';
+  return 'high school (Grades 9-12)';
+}
+
+// ─── Arithmetic step-by-step helper ──────────────────────────────────────────
+
+function tryArithmeticReply(question: string, greeting: string): string | null {
+  // Detect simple arithmetic: "what is 3 + 4?", "solve 12 * 5", "calculate 100 / 4"
+  const arithMatch = question.match(
+    /(?:what\s+is|calculate|solve|compute|find)?\s*(-?\d+(?:\.\d+)?)\s*([+\-×x*\/÷])\s*(-?\d+(?:\.\d+)?)/i,
+  );
+  if (!arithMatch) return null;
+
+  const a = parseFloat(arithMatch[1]);
+  const op = arithMatch[2];
+  const b = parseFloat(arithMatch[3]);
+
+  let result: number;
+  let opName: string;
+  let steps: string[];
+
+  if (op === '+') {
+    result = a + b;
+    opName = 'addition';
+    steps = [
+      `**Step 1 — Identify the operation:** We are adding ${a} and ${b}.`,
+      `**Step 2 — Add the numbers:** ${a} + ${b} = **${result}**`,
+      `**Step 3 — Check:** Start at ${a}, count forward ${b} steps → ${result}. ✓`,
+    ];
+  } else if (op === '-') {
+    result = a - b;
+    opName = 'subtraction';
+    steps = [
+      `**Step 1 — Identify the operation:** We are subtracting ${b} from ${a}.`,
+      `**Step 2 — Subtract:** ${a} − ${b} = **${result}**`,
+      `**Step 3 — Check:** ${result} + ${b} = ${a}. ✓`,
+    ];
+  } else if (op === '×' || op === 'x' || op === '*') {
+    result = a * b;
+    opName = 'multiplication';
+    steps = [
+      `**Step 1 — Identify the operation:** We are multiplying ${a} by ${b}.`,
+      `**Step 2 — Multiply:** ${a} × ${b} = **${result}**`,
+      `**Step 3 — Verify:** Adding ${a} a total of ${b} times → ${result}. ✓`,
+    ];
+  } else if (op === '/' || op === '÷') {
+    if (b === 0) return null;
+    result = a / b;
+    opName = 'division';
+    steps = [
+      `**Step 1 — Identify the operation:** We are dividing ${a} by ${b}.`,
+      `**Step 2 — Divide:** ${a} ÷ ${b} = **${result}**`,
+      `**Step 3 — Check:** ${result} × ${b} = ${a}. ✓`,
+    ];
+  } else {
+    return null;
+  }
+
+  return `${greeting}## Let's solve this ${opName} problem step-by-step!\n\n${steps.join('\n\n')}\n\n### Answer\n> ${a} ${op} ${b} = **${result}**\n\n**Quick check question:** Can you tell me what ${result} ${op === '+' ? '-' : op === '-' ? '+' : op} ${b} equals? Try it yourself!`;
 }
 
 // ─── Stub adapter ─────────────────────────────────────────────────────────────
@@ -184,10 +285,58 @@ class StubLlmAdapter implements LlmAdapter {
 *Generated by Mentora AI lesson planner.*`;
   }
 
-  async tutorReply(messages: TutorMessage[]): Promise<string> {
+  async tutorReply(opts: TutorReplyOpts): Promise<string> {
+    const { messages, language, gradeId, materialText } = opts;
     const last = messages.filter((m) => m.role === 'user').pop();
     const question = last?.content ?? 'your question';
-    return `Great question! Let's work through this together.\n\nYou asked: "${question.slice(0, 120)}${question.length > 120 ? '...' : ''}"\n\nHere's how I'd approach it:\n1. Start by identifying the key idea or concept involved.\n2. Break the problem into smaller steps.\n3. Check your work at each step.\n\nRemember, there's no such thing as a silly question — every question is a step forward in learning! Would you like me to explain any part in more detail?`;
+    const greeting = localeGreeting(language);
+
+    // Try arithmetic step-by-step
+    const arith = tryArithmeticReply(question, greeting);
+    if (arith) return arith;
+
+    // Grade-aware phrasing
+    const gradeNum = gradeId ? parseInt(gradeId.replace('grade-', ''), 10) : 8;
+    const levelDesc =
+      gradeNum <= 4 ? 'young learner' : gradeNum <= 8 ? 'middle-school student' : 'high-school student';
+
+    // Material context hint
+    const contextHint = materialText
+      ? `\n\n> **From your material:** ${materialText.slice(0, 200).trim()}…\n\nUsing this context, here's a more focused explanation:`
+      : '';
+
+    // Socratic, structured, markdown-formatted reply
+    const keyTerms = this._extractKeyTerms(question);
+    const mainConcept = keyTerms[0] ?? 'this topic';
+
+    return `${greeting}## Great question! Let's explore this together.
+
+You asked: *"${question.slice(0, 120)}${question.length > 120 ? '…' : ''}"*${contextHint}
+
+### Understanding the concept
+
+As a ${levelDesc}, think of **${mainConcept}** this way:
+
+1. **Start with what you know** — Connect this to something familiar in your experience.
+2. **Break it down** — Every big idea is made up of smaller, simpler pieces.
+3. **Apply it** — Once you understand the basics, try using it in a new example.
+
+### Step-by-step approach
+
+- **Identify** the key idea or concept involved.
+- **Analyse** what the question is really asking.
+- **Plan** your answer by listing what you know.
+- **Check** your work: does your answer make sense?
+
+### Example
+
+If we think about *${mainConcept}* in everyday life: it's like learning to ride a bike — you start slowly, practice the basics, and soon it feels natural!
+
+### Check yourself
+
+> Can you explain *${mainConcept}* in one sentence, using your own words? That's the real test of understanding!
+
+Remember — there's no such thing as a silly question. Every question is a step forward! Would you like me to explain any part in more detail?`;
   }
 
   async gradeAnswer(opts: {
@@ -212,8 +361,8 @@ class StubLlmAdapter implements LlmAdapter {
     return { score, feedback };
   }
 
-  async *streamTutorReply(messages: TutorMessage[]): AsyncIterable<string> {
-    const reply = await this.tutorReply(messages);
+  async *streamTutorReply(opts: TutorReplyOpts): AsyncIterable<string> {
+    const reply = await this.tutorReply(opts);
     // Emit in small chunks to simulate streaming
     const chunkSize = 40;
     for (let i = 0; i < reply.length; i += chunkSize) {
@@ -230,13 +379,13 @@ class StubLlmAdapter implements LlmAdapter {
       { maxResults: opts.maxResults ?? env.RESEARCH_MAX_RESULTS },
     );
 
-    const gradeLabel = opts.gradeId
+    const gLabel = opts.gradeId
       ? opts.gradeId.replace('grade-', 'Grade ')
       : 'K-12';
     const subjectLabel = opts.subjectId ?? 'General';
 
     const summary =
-      `This briefing covers "${opts.topic}" for ${gradeLabel} (${subjectLabel}). ` +
+      `This briefing covers "${opts.topic}" for ${gLabel} (${subjectLabel}). ` +
       `It draws on ${sources.length} source(s) to give teachers a quick, evidence-based overview. ` +
       (sources[0] ? `According to ${sources[0].siteName ?? 'a recent source'}: ${sources[0].snippet.slice(0, 200)}.` : '');
 
@@ -247,11 +396,11 @@ class StubLlmAdapter implements LlmAdapter {
     // Always have at least 4 key points
     while (keyPoints.length < 4) {
       keyPoints.push(
-        `${keyPoints.length + 1}. Explore hands-on activities that make "${opts.topic}" tangible for ${gradeLabel} learners.`,
+        `${keyPoints.length + 1}. Explore hands-on activities that make "${opts.topic}" tangible for ${gLabel} learners.`,
       );
     }
 
-    const outline = buildStubOutline(opts.topic, gradeLabel);
+    const outline = buildStubOutline(opts.topic, gLabel);
 
     return {
       topic: opts.topic,
@@ -266,8 +415,52 @@ class StubLlmAdapter implements LlmAdapter {
     };
   }
 
+  async generateStudyKit(opts: StudyKitOpts): Promise<StudyKit> {
+    const { text, gradeId, subjectId } = opts;
+
+    // Summary — reuse summarize logic
+    const summary = await this.summarize(text, { maxSentences: 5, gradeId });
+
+    // Key terms — extract 5-8 significant terms with definitions
+    const allTerms = this._extractKeyTerms(text);
+    const termCount = Math.min(8, Math.max(5, allTerms.length));
+    const keyTerms = allTerms.slice(0, termCount).map((term) => {
+      // Find a sentence in the text that contains this term for the definition
+      const sentences = text.replace(/\n+/g, ' ').split(/(?<=[.!?])\s+/).filter(Boolean);
+      const containing = sentences.find((s) => s.toLowerCase().includes(term));
+      const definition = containing
+        ? containing.trim().slice(0, 140)
+        : `A key concept discussed in the material relating to ${subjectId ?? 'this subject'}.`;
+      return { term, definition };
+    });
+
+    // Flashcards — 6-10 Q/A pairs from sentences
+    const sentences = text.replace(/\n+/g, ' ').split(/(?<=[.!?])\s+/).filter(s => s.length > 30);
+    const flashcardCount = Math.min(10, Math.max(6, Math.floor(sentences.length / 3)));
+    const flashcards = Array.from({ length: flashcardCount }, (_, i) => {
+      const term = allTerms[i % allTerms.length] ?? 'concept';
+      const sentence = sentences[i * 2] ?? sentences[i % sentences.length] ?? text.slice(0, 100);
+      return {
+        front: `What is the significance of "${term}" in this material?`,
+        back: sentence.trim().slice(0, 200),
+      };
+    });
+
+    // Quiz — reuse generateQuiz, 5 questions
+    const quiz = await this.generateQuiz({ text, numQuestions: 5, gradeId, subjectId });
+
+    return {
+      summary,
+      keyTerms,
+      flashcards,
+      quiz,
+      gradeId: gradeId ?? null,
+      generatedAt: new Date().toISOString(),
+    };
+  }
+
   /** Extract notable words from text (simple frequency approach). */
-  private _extractKeyTerms(text: string): string[] {
+  _extractKeyTerms(text: string): string[] {
     const stopWords = new Set([
       'the','a','an','and','or','but','in','on','at','to','for','of','with',
       'is','are','was','were','be','been','being','have','has','had','do',
@@ -293,7 +486,7 @@ class StubLlmAdapter implements LlmAdapter {
  * Build a deterministic 3-section lesson outline for the given topic and grade.
  * Used by both the stub LLM adapter and as a fallback in the Anthropic adapter.
  */
-function buildStubOutline(topic: string, gradeLabel: string): LessonOutlineSection[] {
+function buildStubOutline(topic: string, gLabel: string): LessonOutlineSection[] {
   return [
     {
       title: 'Introduction & Prior Knowledge (10 min)',
@@ -307,7 +500,7 @@ function buildStubOutline(topic: string, gradeLabel: string): LessonOutlineSecti
       title: `Core Concepts: ${topic} (25 min)`,
       points: [
         `Introduce key vocabulary and definitions relevant to "${topic}".`,
-        `Walk through 2–3 concrete examples appropriate for ${gradeLabel}.`,
+        `Walk through 2–3 concrete examples appropriate for ${gLabel}.`,
         `Check for understanding with quick think-pair-share prompts.`,
         `Address common misconceptions identified in the research.`,
       ],
@@ -322,6 +515,38 @@ function buildStubOutline(topic: string, gradeLabel: string): LessonOutlineSecti
       ],
     },
   ];
+}
+
+// ─── Build tutor system prompt ─────────────────────────────────────────────────
+
+function buildTutorSystemPrompt(opts: {
+  language?: string;
+  gradeId?: string;
+  subjectId?: string;
+  materialText?: string;
+}): string {
+  const { language, gradeId, subjectId, materialText } = opts;
+  const gNum = gradeId ? parseInt(gradeId.replace('grade-', ''), 10) : undefined;
+  const gradeDesc = gNum
+    ? gNum <= 4 ? `a Grade ${gNum} student (age ~${gNum + 5})` : gNum <= 8 ? `a Grade ${gNum} middle-school student` : `a Grade ${gNum} high-school student`
+    : 'a K-12 student';
+  const subjectDesc = subjectId ? ` studying ${subjectId}` : '';
+  const langInstr = language && language.toLowerCase() !== 'en'
+    ? ` Always reply in the language with BCP-47 code "${language}".`
+    : '';
+  const materialInstr = materialText
+    ? `\n\nThe student's material is attached below. Reference it when it helps your answer:\n---\n${materialText.slice(0, 3000)}\n---`
+    : '';
+
+  return `You are Mentora Tutor — a warm, patient, and encouraging AI tutor for K-12 students. You are currently helping ${gradeDesc}${subjectDesc}.${langInstr}
+
+Guidelines:
+- Never just give the answer — guide the student to discover it through questions and hints.
+- Break explanations into clear, numbered steps.
+- Use simple analogies and real-world examples appropriate for the student's grade.
+- Celebrate effort and curiosity. End replies with a gentle check question.
+- Format your replies with Markdown headings and bullet points for clarity.
+- When the student makes an error, acknowledge their effort and guide them gently.${materialInstr}`;
 }
 
 // ─── Anthropic adapter (production) ───────────────────────────────────────────
@@ -414,14 +639,14 @@ ${opts.text.slice(0, 6000)}`;
     );
   }
 
-  async tutorReply(messages: TutorMessage[]): Promise<string> {
+  async tutorReply(opts: TutorReplyOpts): Promise<string> {
     const client = await this.clientPromise;
+    const systemPrompt = buildTutorSystemPrompt(opts);
     const response = await client.messages.create({
       model: this.model,
       max_tokens: 1024,
-      system:
-        'You are Mentora Tutor, a warm and patient AI tutor for K-12 students. Give clear, encouraging, step-by-step help. Never just give the answer — guide the student to discover it.',
-      messages: messages.map((m) => ({ role: m.role, content: m.content })),
+      system: systemPrompt,
+      messages: opts.messages.map((m) => ({ role: m.role, content: m.content })),
     });
     const block = response.content[0];
     return block.type === 'text' ? block.text : '';
@@ -444,15 +669,15 @@ ${opts.text.slice(0, 6000)}`;
     }
   }
 
-  async *streamTutorReply(messages: TutorMessage[]): AsyncIterable<string> {
+  async *streamTutorReply(opts: TutorReplyOpts): AsyncIterable<string> {
     const client = await this.clientPromise;
+    const systemPrompt = buildTutorSystemPrompt(opts);
     // .stream() returns a MessageStream helper; .textStream is an async iterable of text chunks
     const stream = client.messages.stream({
       model: this.model,
       max_tokens: 1024,
-      system:
-        'You are Mentora Tutor, a warm and patient AI tutor for K-12 students.',
-      messages: messages.map((m) => ({ role: m.role, content: m.content })),
+      system: systemPrompt,
+      messages: opts.messages.map((m) => ({ role: m.role, content: m.content })),
     });
 
     // Iterate raw stream events and yield text deltas. This is stable across
@@ -470,20 +695,12 @@ ${opts.text.slice(0, 6000)}`;
 
   /**
    * Agentic research loop using Anthropic tool use.
-   *
-   * Flow:
-   *  1. Send system prompt + user message with a `web_search` tool definition.
-   *  2. Model calls web_search 1-3 times; we execute each via the research adapter.
-   *  3. Model returns a final message containing strict JSON for the briefing.
-   *  4. Parse the JSON into ResearchBriefing; fall back to stub synthesis on parse failure.
-   *
-   * The loop is capped at 4 iterations to prevent runaway tool calls.
    */
   async researchTopic(opts: ResearchTopicOpts): Promise<ResearchBriefing> {
     const research = getResearchAdapter();
     const client = await this.clientPromise;
     const maxResults = opts.maxResults ?? env.RESEARCH_MAX_RESULTS;
-    const gradeLabel = opts.gradeId ? opts.gradeId.replace('grade-', 'Grade ') : 'K-12';
+    const gLabel = opts.gradeId ? opts.gradeId.replace('grade-', 'Grade ') : 'K-12';
     const subjectLabel = opts.subjectId ?? 'General';
 
     // Tool definition for Anthropic tool-use API
@@ -507,7 +724,7 @@ ${opts.text.slice(0, 6000)}`;
 
     const systemPrompt = `You are a curriculum research assistant for K-12 teachers. \
 Your job is to research a topic thoroughly using the web_search tool, then synthesise a \
-teacher-ready briefing. The teacher works at the ${gradeLabel} level (subject: ${subjectLabel}).
+teacher-ready briefing. The teacher works at the ${gLabel} level (subject: ${subjectLabel}).
 
 After gathering information with 1-3 web_search calls, respond ONLY with valid JSON \
 matching this exact structure (no markdown fences, no extra text):
@@ -528,7 +745,7 @@ matching this exact structure (no markdown fences, no extra text):
     const messages: AnthropicMessage[] = [
       {
         role: 'user',
-        content: `Please research the topic: "${opts.topic}" for ${gradeLabel} students (${subjectLabel}). Use the web_search tool to gather current, relevant information, then provide your structured briefing.`,
+        content: `Please research the topic: "${opts.topic}" for ${gLabel} students (${subjectLabel}). Use the web_search tool to gather current, relevant information, then provide your structured briefing.`,
       },
     ];
 
@@ -584,9 +801,9 @@ matching this exact structure (no markdown fences, no extra text):
               topic: opts.topic,
               gradeId: opts.gradeId ?? null,
               subjectId: opts.subjectId ?? null,
-              summary: parsed.summary ?? `Research briefing for "${opts.topic}" (${gradeLabel}, ${subjectLabel}).`,
+              summary: parsed.summary ?? `Research briefing for "${opts.topic}" (${gLabel}, ${subjectLabel}).`,
               keyPoints: parsed.keyPoints ?? [],
-              suggestedLessonOutline: parsed.suggestedLessonOutline ?? buildStubOutline(opts.topic, gradeLabel),
+              suggestedLessonOutline: parsed.suggestedLessonOutline ?? buildStubOutline(opts.topic, gLabel),
               sources: finalSources.slice(0, maxResults),
               provider: `anthropic+${env.RESEARCH_DRIVER}`,
               liveWeb: research.liveWeb,
@@ -598,10 +815,8 @@ matching this exact structure (no markdown fences, no extra text):
         }
 
         // Execute tool calls and add results to the conversation
-        // First, add the assistant message with tool use
         messages.push({ role: 'assistant', content: response.content });
 
-        // Build tool results
         const toolResults: import('@anthropic-ai/sdk').default.ToolResultBlockParam[] = [];
 
         for (const block of toolUseBlocks) {
@@ -617,7 +832,6 @@ matching this exact structure (no markdown fences, no extra text):
             sources = [];
           }
 
-          // Accumulate sources
           for (const s of sources) {
             if (!allSources.find((a) => a.url === s.url)) {
               allSources.push(s);
@@ -637,22 +851,19 @@ matching this exact structure (no markdown fences, no extra text):
           });
         }
 
-        // Add user message with tool results
         messages.push({ role: 'user', content: toolResults });
       }
     } catch (err) {
       console.error('[llm:anthropic] researchTopic loop error:', err);
-      // Fall through to stub synthesis
     }
 
-    // Fallback: deterministic synthesis from collected sources (or fetch stub sources)
+    // Fallback: deterministic synthesis from collected sources
     console.warn('[llm:anthropic] researchTopic falling back to stub synthesis');
     const fallbackSources = allSources.length > 0
       ? allSources
       : await research.search(opts.topic, { maxResults });
 
     const stub = new StubLlmAdapter();
-    // Use stub adapter's researchTopic but override provider
     const fallback = await stub.researchTopic({ ...opts, maxResults });
     return {
       ...fallback,
@@ -661,7 +872,78 @@ matching this exact structure (no markdown fences, no extra text):
       liveWeb: research.liveWeb,
     };
   }
+
+  async generateStudyKit(opts: StudyKitOpts): Promise<StudyKit> {
+    const { text, gradeId, subjectId } = opts;
+    const grade = gradeId ? ` Grade level: ${gradeId}.` : '';
+    const subject = subjectId ? ` Subject: ${subjectId}.` : '';
+
+    const prompt = `Generate a complete AI Study Kit from the following educational material.${grade}${subject}
+
+Create a JSON object with this EXACT structure (no markdown, no extra text):
+{
+  "summary": "<3-5 sentence summary of the material>",
+  "keyTerms": [
+    {"term": "<term>", "definition": "<1-2 sentence definition from the material>"}
+  ],
+  "flashcards": [
+    {"front": "<question or concept>", "back": "<answer or explanation>"}
+  ],
+  "quiz": [
+    {"question": "<question>", "options": ["<A>","<B>","<C>","<D>"], "answerIndex": 0, "explanation": "<why correct>"}
+  ]
 }
+
+Requirements:
+- summary: 3-5 sentences, age-appropriate for ${gradeId ?? 'K-12'}.
+- keyTerms: 5-8 key terms with definitions pulled directly from the material.
+- flashcards: 6-10 Q&A pairs covering the most important concepts.
+- quiz: exactly 5 multiple-choice questions, each with 4 options and answerIndex (0-3).
+
+Material:
+${text.slice(0, 6000)}`;
+
+    try {
+      const raw = await this._complete(prompt, 'You are an expert educational content creator for K-12. Generate structured study materials as valid JSON.');
+      const match = raw.match(/\{[\s\S]*\}/);
+      if (!match) throw new Error('No JSON object found in response');
+      const parsed = JSON.parse(match[0]) as {
+        summary?: string;
+        keyTerms?: { term: string; definition: string }[];
+        flashcards?: { front: string; back: string }[];
+        quiz?: AiQuizQuestion[];
+      };
+
+      // Validate and fallback per field
+      const stub = new StubLlmAdapter();
+      const stubKit = await stub.generateStudyKit(opts);
+
+      return {
+        summary: parsed.summary ?? stubKit.summary,
+        keyTerms: Array.isArray(parsed.keyTerms) && parsed.keyTerms.length >= 3
+          ? parsed.keyTerms
+          : stubKit.keyTerms,
+        flashcards: Array.isArray(parsed.flashcards) && parsed.flashcards.length >= 4
+          ? parsed.flashcards
+          : stubKit.flashcards,
+        quiz: Array.isArray(parsed.quiz) && parsed.quiz.length >= 3
+          ? parsed.quiz
+          : stubKit.quiz,
+        gradeId: gradeId ?? null,
+        generatedAt: new Date().toISOString(),
+      };
+    } catch (err) {
+      console.error('[llm:anthropic] generateStudyKit parse error:', err);
+      // Fallback to stub
+      return new StubLlmAdapter().generateStudyKit(opts);
+    }
+  }
+}
+
+// ─── OpenAI adapter stub (falls through to StubLlmAdapter) ────────────────────
+
+// The OpenAI adapter is defined in the factory below — it uses StubLlmAdapter
+// until a real implementation is added.
 
 // ─── Factory ──────────────────────────────────────────────────────────────────
 

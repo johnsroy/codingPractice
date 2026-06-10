@@ -228,18 +228,21 @@ export function PayoutsSection({ compact = false }: PayoutsSectionProps) {
   // ---- State 1: Not started — show the main CTA ---------------------------
   if (compact) {
     return (
-      <div className="flex items-center gap-3 py-1">
-        <Banknote size={20} className="text-brand-400 shrink-0" aria-hidden="true" />
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-stone-800">Connect your bank to get paid</p>
-          <p className="text-sm text-stone-500">
-            Set up payouts so earnings go straight to your account.
-          </p>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 py-1">
+        <div className="flex items-start gap-3 flex-1 min-w-0">
+          <Banknote size={20} className="text-brand-400 shrink-0 mt-0.5" aria-hidden="true" />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-stone-800">Connect your bank to get paid</p>
+            <p className="text-sm text-stone-500">
+              Set up payouts so earnings go straight to your account.
+            </p>
+          </div>
         </div>
         <Button
           size="sm"
           onClick={handleSetupPayouts}
           loading={onboarding}
+          className="self-start sm:self-auto shrink-0"
         >
           Set up payouts
         </Button>

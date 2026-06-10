@@ -51,7 +51,7 @@ function ToastItem({ item, onDismiss }: { item: ToastItem; onDismiss: () => void
       aria-live="polite"
       className={clsx(
         'flex items-start gap-3 p-4 rounded-xl border shadow-card',
-        'animate-slide-up min-w-[280px] max-w-sm',
+        'animate-slide-up w-full sm:min-w-[280px] sm:max-w-sm',
         bg[item.kind],
       )}
     >
@@ -59,7 +59,7 @@ function ToastItem({ item, onDismiss }: { item: ToastItem; onDismiss: () => void
       <p className="text-sm font-medium text-stone-800 flex-1">{item.message}</p>
       <button
         onClick={onDismiss}
-        className="text-stone-400 hover:text-stone-700 p-1 rounded"
+        className="text-stone-400 hover:text-stone-700 p-2 -m-1 rounded min-w-[36px] min-h-[36px] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
         aria-label="Dismiss notification"
       >
         <X size={16} />
@@ -87,14 +87,26 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={{ toast, success, error, info }}>
       {children}
-      {/* Toast stack */}
+      {/* Toast stack — fixed top-center on mobile, top-right on desktop.
+          Uses safe-area insets so notched devices stay clear of the status bar.
+          z-[200] sits above modals (z-50), drawers (z-40), and the navbar. */}
       <div
-        className="fixed bottom-6 right-6 z-[100] flex flex-col gap-3"
+        className={[
+          'fixed z-[200] flex flex-col gap-3 pointer-events-none',
+          /* mobile: full-width centered strip near top */
+          'top-[max(1rem,env(safe-area-inset-top))]',
+          'left-4 right-4',
+          /* sm+: pin to top-right corner */
+          'sm:left-auto sm:right-6 sm:w-auto',
+        ].join(' ')}
         aria-live="polite"
         aria-atomic="false"
       >
         {toasts.map((t) => (
-          <ToastItem key={t.id} item={t} onDismiss={() => dismiss(t.id)} />
+          /* re-enable pointer events on the individual items */
+          <div key={t.id} className="pointer-events-auto">
+            <ToastItem item={t} onDismiss={() => dismiss(t.id)} />
+          </div>
         ))}
       </div>
     </ToastContext.Provider>

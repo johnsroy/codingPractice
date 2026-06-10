@@ -17,10 +17,15 @@
     "@livekit/components-react": "^2.6.3",
     "livekit-client": "^2.7.2",
     "clsx": "^2.1.1",
+    "katex": "^0.16.11",
     "lucide-react": "^0.468.0",
     "next": "^15.0.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-markdown": "^9.0.1",
+    "rehype-katex": "^7.0.1",
+    "remark-gfm": "^4.0.0",
+    "remark-math": "^6.0.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {

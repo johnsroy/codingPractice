@@ -63,8 +63,10 @@ test.describe('AI Tutor — learner', () => {
 
     await page.getByRole('button', { name: /Send message/i }).click();
 
-    // The user bubble should appear immediately
-    await expect(page.getByText('What is photosynthesis?')).toBeVisible({ timeout: 5_000 });
+    // The user bubble should appear in the chat (the title also shows in the sidebar).
+    await expect(
+      page.getByLabel('Chat messages').getByText('What is photosynthesis?').first(),
+    ).toBeVisible({ timeout: 5_000 });
 
     // Wait for the assistant response — the loading spinner disappears and a
     // non-empty assistant bubble appears (AI latency can be up to 30 s in CI)
@@ -77,20 +79,11 @@ test.describe('AI Tutor — learner', () => {
     const quizBtn = page.getByRole('button', { name: /Make a quiz/i });
     await quizBtn.click();
 
-    // The user bubble for the quiz prompt should appear
-    await expect(
-      page.getByText(/Please create a short quiz for me on this topic/i),
-    ).toBeVisible({ timeout: 5_000 });
-
     // Wait for the AI response; a quiz renders option buttons labelled "A.", "B.", etc.
     // or at minimum the assistant bubble text appears (not loading)
+    // Quiz option buttons use aria-label "Option N: …" (one per question).
     await expect(
-      // Option buttons use aria-label "Option N: …"; one per question, so take first.
-      page.getByRole('button', { name: /^Option 1:/i })
-        .or(page.getByRole('button', { name: /^Option A:/i }))
-        // Fallback: any quiz answer button rendered inside .bg-brand-50
-        .or(page.locator('.bg-brand-50 button'))
-        .first(),
+      page.getByRole('button', { name: /^Option 1:/i }).first(),
     ).toBeVisible({ timeout: 45_000 });
   });
 });

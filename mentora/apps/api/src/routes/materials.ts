@@ -1,9 +1,11 @@
 /**
  * Material routes.
- *   POST /materials          — upload a file (multipart); triggers async OCR + AI pipeline
- *   GET  /materials          — list materials (?courseId=)
- *   GET  /materials/:id      — get material by id
- *   GET  /materials/:id/ocr  — get OCR status + extracted text
+ *   POST /materials                  — upload a file (multipart); triggers async OCR + AI pipeline
+ *   GET  /materials                  — list materials (?courseId=)
+ *   GET  /materials/:id              — get material by id
+ *   GET  /materials/:id/ocr          — get OCR status + extracted text
+ *   GET  /materials/:id/study-kit    — get AI Study Kit (404 if not generated)
+ *   POST /materials/:id/study-kit    — generate (or regenerate) AI Study Kit from extractedText
  *
  * Upload pipeline (non-blocking):
  *  1. Multer reads file into memory buffer.
@@ -11,6 +13,7 @@
  *  3. Material row created with ocrStatus='processing'.
  *  4. Response sent immediately (201).
  *  5. Background: OCR adapter extracts text → LLM summarises → row updated.
+ *  6. If extractedText is substantial (>120 chars), auto-generate the study kit (best-effort).
  */
 
 import { Router } from 'express';
@@ -23,7 +26,7 @@ import { authenticate } from '../middleware/auth';
 import { getStorageAdapter } from '../adapters/storage';
 import { getOcrAdapter } from '../adapters/ocr';
 import { getLlmAdapter } from '../adapters/llm';
-import type { MaterialKind, OcrStatus } from '@mentora/shared';
+import type { MaterialKind, OcrStatus, StudyKit } from '@mentora/shared';
 
 export const materialsRouter = Router();
 
@@ -138,6 +141,23 @@ async function runOcrPipeline(
     });
 
     console.log(`[materials] OCR pipeline complete for ${materialId}: status=${finalStatus}`);
+
+    // Auto-generate the study kit when there's substantial text (best-effort, non-blocking)
+    if (finalStatus === 'done' && extractedText.trim().length > 120) {
+      setImmediate(async () => {
+        try {
+          const studyKit = await llm.generateStudyKit({ text: extractedText });
+          await prisma.material.update({
+            where: { id: materialId },
+            data: { studyKit: studyKit as object },
+          });
+          console.log(`[materials] Study kit auto-generated for ${materialId}`);
+        } catch (err) {
+          // Best-effort: swallow errors so the OCR pipeline result is not affected
+          console.error(`[materials] Auto study-kit generation failed for ${materialId}:`, err);
+        }
+      });
+    }
   } catch (err) {
     console.error(`[materials] OCR pipeline failed for ${materialId}:`, err);
     await prisma.material
@@ -322,5 +342,57 @@ materialsRouter.get(
       extractedText: material.extractedText,
       aiSummary: material.aiSummary,
     });
+  }),
+);
+
+// GET /materials/:id/study-kit — return the generated study kit (404 if not generated)
+materialsRouter.get(
+  '/:id/study-kit',
+  authenticate,
+  asyncHandler(async (req, res) => {
+    const material = await prisma.material.findUnique({
+      where: { id: req.params['id'] },
+      select: { id: true, ownerId: true, studyKit: true },
+    });
+    if (!material) throw notFound('Material');
+    // RBAC: only the owner can read their material's study kit
+    if (material.ownerId !== req.user!.sub) throw forbidden('Access denied.');
+
+    if (!material.studyKit) {
+      throw notFound('Study kit has not been generated for this material yet.');
+    }
+
+    res.json(material.studyKit as unknown as StudyKit);
+  }),
+);
+
+// POST /materials/:id/study-kit — generate (or regenerate) the AI Study Kit
+materialsRouter.post(
+  '/:id/study-kit',
+  authenticate,
+  asyncHandler(async (req, res) => {
+    const material = await prisma.material.findUnique({
+      where: { id: req.params['id'] },
+      select: { id: true, ownerId: true, extractedText: true },
+    });
+    if (!material) throw notFound('Material');
+    // RBAC: only the owner can generate
+    if (material.ownerId !== req.user!.sub) throw forbidden('Access denied.');
+
+    if (!material.extractedText || material.extractedText.trim().length === 0) {
+      throw badRequest(
+        'This material has no extracted text. Please wait for OCR to complete before generating a study kit.',
+      );
+    }
+
+    const llm = getLlmAdapter();
+    const studyKit = await llm.generateStudyKit({ text: material.extractedText });
+
+    await prisma.material.update({
+      where: { id: material.id },
+      data: { studyKit: studyKit as object },
+    });
+
+    res.json(studyKit);
   }),
 );

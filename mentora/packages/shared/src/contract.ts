@@ -42,8 +42,12 @@ export const API_ROUTES = {
     upload: '/materials', // multipart/form-data; triggers OCR pipeline
     byId: (id: string) => `/materials/${id}`,
     ocrStatus: (id: string) => `/materials/${id}/ocr`,
+    studyKit: (id: string) => `/materials/${id}/study-kit`, // GET/POST AI study kit
     list: '/materials', // ?courseId=
   },
+
+  /** Geolocation → suggested currency/region (no auth). */
+  geo: '/geo',
 
   sessions: {
     list: '/sessions', // ?mine=&kind=&upcoming=

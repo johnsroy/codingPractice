@@ -188,6 +188,7 @@ model Material {
   ocrStatus     OcrStatus    @default(pending)
   extractedText String?
   aiSummary     String?
+  studyKit      Json?
   createdAt     DateTime     @default(now())
 
   @@index([ownerId])
