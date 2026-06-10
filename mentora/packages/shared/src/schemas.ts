@@ -89,6 +89,17 @@ export const checkoutSchema = z.object({
   sessionId: z.string().optional(),
   courseId: z.string().optional(),
   interval: z.enum(['month', 'year']).optional(),
+  /** Display/charge currency; Stripe charges in this currency. */
+  currency: z.enum(['USD', 'CAD', 'INR']).optional(),
+});
+
+export const submitVerificationSchema = z.object({
+  note: z.string().max(1000).optional(),
+});
+
+export const reviewVerificationSchema = z.object({
+  decision: z.enum(['approve', 'reject']),
+  note: z.string().max(1000).optional(),
 });
 
 export type RegisterInput = z.infer<typeof registerSchema>;
@@ -99,4 +110,6 @@ export type CreateLessonInput = z.infer<typeof createLessonSchema>;
 export type CreateSessionInput = z.infer<typeof createSessionSchema>;
 export type AiRequestInput = z.infer<typeof aiRequestSchema>;
 export type ResearchRequestInput = z.infer<typeof researchRequestSchema>;
+export type SubmitVerificationInput = z.infer<typeof submitVerificationSchema>;
+export type ReviewVerificationInput = z.infer<typeof reviewVerificationSchema>;
 export type CheckoutInput = z.infer<typeof checkoutSchema>;

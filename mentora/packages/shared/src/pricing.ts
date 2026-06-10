@@ -162,6 +162,98 @@ export function splitEarnings(
   };
 }
 
-export function formatPrice(cents: number, currency = 'USD'): string {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(cents / 100);
+export function formatPrice(cents: number, currency: Currency | string = 'USD'): string {
+  const meta = CURRENCIES.find((c) => c.code === currency);
+  return new Intl.NumberFormat(meta?.locale ?? 'en-US', {
+    style: 'currency',
+    currency,
+  }).format(cents / 100);
+}
+
+// ─── Multi-currency ───────────────────────────────────────────────────────────
+// Mentora bills globally via Stripe (cards work in Canada/US/India + 40 more
+// countries). Prices are shown in the user's currency; the checkout charges in
+// that currency. INR/local methods (UPI) can be layered on for India.
+
+export type Currency = 'USD' | 'CAD' | 'INR';
+
+export interface CurrencyMeta {
+  code: Currency;
+  symbol: string;
+  name: string;
+  locale: string;
+  flag: string;
+}
+
+export const CURRENCIES: CurrencyMeta[] = [
+  { code: 'USD', symbol: '$', name: 'US Dollar', locale: 'en-US', flag: '🇺🇸' },
+  { code: 'CAD', symbol: 'CA$', name: 'Canadian Dollar', locale: 'en-CA', flag: '🇨🇦' },
+  { code: 'INR', symbol: '₹', name: 'Indian Rupee', locale: 'en-IN', flag: '🇮🇳' },
+];
+
+export const DEFAULT_CURRENCY: Currency = 'USD';
+
+/** Map an ISO country code to its default display currency. */
+export function currencyForCountry(country?: string | null): Currency {
+  switch ((country ?? '').toUpperCase()) {
+    case 'IN':
+      return 'INR';
+    case 'CA':
+      return 'CAD';
+    default:
+      return 'USD';
+  }
+}
+
+interface CurrencyPrice {
+  monthlyCents: number;
+  annualCents: number;
+}
+
+/**
+ * Localized price points per plan and currency. Not FX conversions — these are
+ * intentional, market-adjusted prices (e.g. INR tuned to Indian willingness to
+ * pay). Free plans are 0 in every currency.
+ */
+export const PLAN_PRICES: Record<string, Partial<Record<Currency, CurrencyPrice>>> = {
+  scholar: {
+    USD: { monthlyCents: 1900, annualCents: 19000 },
+    CAD: { monthlyCents: 2500, annualCents: 25000 },
+    INR: { monthlyCents: 149900, annualCents: 1499000 }, // ₹1,499 / ₹14,990
+  },
+  family: {
+    USD: { monthlyCents: 3900, annualCents: 39000 },
+    CAD: { monthlyCents: 4900, annualCents: 49000 },
+    INR: { monthlyCents: 299900, annualCents: 2999000 }, // ₹2,999 / ₹29,990
+  },
+  'mentor-pro': {
+    USD: { monthlyCents: 1200, annualCents: 12000 },
+    CAD: { monthlyCents: 1500, annualCents: 15000 },
+    INR: { monthlyCents: 99900, annualCents: 999000 }, // ₹999 / ₹9,990
+  },
+};
+
+/** Price (in minor units) for a plan in a given currency + interval. */
+export function getPlanPriceCents(
+  planId: string,
+  currency: Currency = DEFAULT_CURRENCY,
+  interval: 'month' | 'year' = 'month'
+): number {
+  const plan = getPlan(planId);
+  if (!plan || plan.priceCents === 0) return 0;
+  const localized = PLAN_PRICES[planId]?.[currency];
+  if (localized) {
+    return interval === 'year' ? localized.annualCents : localized.monthlyCents;
+  }
+  // Fallback to the canonical USD amounts on the plan.
+  return interval === 'year' ? plan.annualPriceCents ?? plan.priceCents * 10 : plan.priceCents;
+}
+
+/** Convenience: formatted localized price for a plan. */
+export function formatPlanPrice(
+  planId: string,
+  currency: Currency = DEFAULT_CURRENCY,
+  interval: 'month' | 'year' = 'month'
+): string {
+  return formatPrice(getPlanPriceCents(planId, currency, interval), currency);
 }

@@ -63,7 +63,8 @@ If either URL fails to load, stop and notify the development team. Do not start 
 
 ## Demo accounts
 
-All accounts use the same password: **`Password123!`**
+All accounts use the password **`Password123!`**, except the admin account,
+which uses **`Admin@1234!`**.
 
 | Role | Email | Name | Key details |
 |------|-------|------|-------------|
@@ -77,7 +78,7 @@ All accounts use the same password: **`Password123!`**
 | Guardian | `david.park@example.com` | David Park | Parent of Lily Park and Ethan Park |
 | Child | `lily.park@example.com` | Lily Park | Enrolled in Algebra + Reading; guardian is David |
 | Child | `ethan.park@example.com` | Ethan Park | Enrolled in Python + Chemistry; guardian is David |
-| Admin | `admin@mentora.app` | Mentora Admin | Platform administrator |
+| Admin | `admin@mentora.app` | Mentora Admin | Platform administrator — password `Admin@1234!` |
 
 ---
 

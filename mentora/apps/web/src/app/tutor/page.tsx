@@ -31,7 +31,7 @@ function QuizCard({ questions }: QuizCardProps) {
     <div className="mt-4 space-y-5">
       {questions.map((q, qi) => (
         <div key={qi} className="bg-brand-50 rounded-2xl p-5 border border-brand-100">
-          <p className="font-semibold text-stone-800 mb-4">
+          <p className="font-semibold text-ink-900 mb-4">
             {qi + 1}. {q.question}
           </p>
           <div className="space-y-2.5">
@@ -69,7 +69,7 @@ function QuizCard({ questions }: QuizCardProps) {
           {revealed[qi] && (
             <div className="mt-4 bg-white rounded-xl p-4 border border-brand-100">
               <p className="text-sm font-semibold text-brand-700 mb-1">Explanation</p>
-              <p className="text-sm text-stone-700">{q.explanation}</p>
+              <p className="text-sm text-ink-700">{q.explanation}</p>
             </div>
           )}
         </div>
@@ -121,7 +121,10 @@ export default function TutorPage() {
   }, [messages]);
 
   const sendMessage = useCallback(
-    async (text: string, task: 'tutor_chat' | 'generate_quiz' | 'explain_simply' | 'summarize_material' = 'tutor_chat') => {
+    async (
+      text: string,
+      task: 'tutor_chat' | 'generate_quiz' | 'explain_simply' | 'summarize_material' = 'tutor_chat',
+    ) => {
       if (!text.trim() || loading) return;
 
       const userMsg: ChatMessage = {
@@ -156,7 +159,9 @@ export default function TutorPage() {
               const chunk: string = parsed.text ?? parsed.content ?? '';
               accumulated += chunk;
               setMessages((prev) =>
-                prev.map((m) => (m.id === aiMsg.id ? { ...m, content: accumulated, loading: false } : m)),
+                prev.map((m) =>
+                  m.id === aiMsg.id ? { ...m, content: accumulated, loading: false } : m,
+                ),
               );
             } catch { /* ignore parse errors */ }
           };
@@ -193,10 +198,7 @@ export default function TutorPage() {
 
       // Regular invoke for non-chat tasks
       try {
-        const res = await aiApi.invoke({
-          task,
-          prompt: text.trim(),
-        });
+        const res = await aiApi.invoke({ task, prompt: text.trim() });
         // generate_quiz returns the questions array under `result`; every other
         // task returns a plain string. Normalise so we never render an object.
         const questions = Array.isArray(res.result) ? res.result : res.questions;
@@ -228,14 +230,14 @@ export default function TutorPage() {
   return (
     <div className="section">
       <div className="page-container max-w-3xl">
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <div className="w-14 h-14 rounded-2xl bg-brand-500 flex items-center justify-center shadow-soft">
-            <Bot size={30} className="text-white" />
+        {/* ── Header ── */}
+        <div className="flex items-center gap-4 mb-8 animate-fade-up">
+          <div className="w-14 h-14 rounded-2xl bg-brand-500 flex items-center justify-center shadow-glow">
+            <Bot size={30} className="text-white" aria-hidden="true" />
           </div>
           <div>
-            <h1 className="text-stone-900">AI Tutor</h1>
-            <p className="text-stone-500">Ask anything — I&apos;m here to help you learn.</p>
+            <h1 className="text-ink-900">AI Tutor</h1>
+            <p className="text-ink-700">Ask anything — I&apos;m here to help you learn.</p>
           </div>
           {!isAuthenticated && (
             <Badge variant="amber" size="md" className="ml-auto">
@@ -244,7 +246,7 @@ export default function TutorPage() {
           )}
         </div>
 
-        {/* Quick actions */}
+        {/* ── Quick actions ── */}
         <div className="flex flex-wrap gap-3 mb-6">
           {quickActions.map((a) => (
             <Button
@@ -269,9 +271,15 @@ export default function TutorPage() {
           </Button>
         </div>
 
-        {/* Chat */}
-        <div className="bg-white rounded-2xl border border-surface-200 shadow-card overflow-hidden flex flex-col">
-          <div className="flex-1 overflow-y-auto p-6 space-y-5" style={{ minHeight: '400px', maxHeight: '60vh' }}>
+        {/* ── Chat window ── */}
+        <Card padding="none" className="overflow-hidden flex flex-col shadow-lift">
+          {/* Messages */}
+          <div
+            className="flex-1 overflow-y-auto p-6 space-y-5"
+            style={{ minHeight: '400px', maxHeight: '60vh' }}
+            aria-live="polite"
+            aria-label="Chat messages"
+          >
             {messages.map((msg) => (
               <div
                 key={msg.id}
@@ -284,7 +292,9 @@ export default function TutorPage() {
                 <div
                   className={clsx(
                     'w-10 h-10 rounded-xl flex items-center justify-center shrink-0',
-                    msg.role === 'assistant' ? 'bg-brand-500 text-white' : 'bg-surface-100 text-stone-500',
+                    msg.role === 'assistant'
+                      ? 'bg-brand-500 text-white'
+                      : 'bg-surface-100 text-ink-700',
                   )}
                   aria-hidden="true"
                 >
@@ -300,12 +310,12 @@ export default function TutorPage() {
                   className={clsx(
                     'max-w-[80%] rounded-2xl px-5 py-4',
                     msg.role === 'assistant'
-                      ? 'bg-surface-50 text-stone-800 border border-surface-200'
+                      ? 'bg-surface-50 text-ink-900 border border-surface-200'
                       : 'bg-brand-500 text-white',
                   )}
                 >
                   {msg.loading ? (
-                    <Spinner size="sm" />
+                    <Spinner size="sm" label="Thinking…" />
                   ) : (
                     <>
                       <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
@@ -320,8 +330,8 @@ export default function TutorPage() {
             <div ref={bottomRef} />
           </div>
 
-          {/* Input */}
-          <div className="border-t border-surface-200 p-4 flex gap-3 items-end">
+          {/* Input area */}
+          <div className="border-t border-surface-200 p-4 flex gap-3 items-end bg-surface-50">
             <textarea
               ref={inputRef}
               value={input}
@@ -334,7 +344,7 @@ export default function TutorPage() {
               }}
               placeholder="Ask anything… (Enter to send, Shift+Enter for new line)"
               rows={2}
-              className="flex-1 resize-none bg-surface-50 border-2 border-surface-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-400 placeholder:text-stone-400"
+              className="flex-1 resize-none bg-white border-2 border-surface-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-400 placeholder:text-stone-400 min-h-[48px]"
               aria-label="Type your question"
               disabled={loading}
             />
@@ -349,18 +359,27 @@ export default function TutorPage() {
               Send
             </Button>
           </div>
-        </div>
+        </Card>
 
-        {/* Tips */}
+        {/* ── Tips ── */}
         <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
-            { icon: <MessageCircle size={20} className="text-brand-400" />, tip: 'Ask follow-up questions anytime — I remember our conversation.' },
-            { icon: <HelpCircle size={20} className="text-teal-400" />, tip: 'Say "make a quiz on fractions" and I\'ll create an interactive practice test.' },
-            { icon: <Sparkles size={20} className="text-accent-500" />, tip: 'Ask me to "explain like I\'m 8" for super-simple explanations.' },
+            {
+              icon: <MessageCircle size={20} className="text-brand-400" />,
+              tip: 'Ask follow-up questions anytime — I remember our conversation.',
+            },
+            {
+              icon: <HelpCircle size={20} className="text-teal-400" />,
+              tip: "Say \"make a quiz on fractions\" and I'll create an interactive practice test.",
+            },
+            {
+              icon: <Sparkles size={20} className="text-accent-500" />,
+              tip: "Ask me to \"explain like I'm 8\" for super-simple explanations.",
+            },
           ].map((t, i) => (
-            <div key={i} className="flex gap-3 p-4 bg-surface-50 rounded-xl">
+            <div key={i} className="flex gap-3 p-4 bg-surface-50 rounded-xl border border-surface-200">
               <span className="shrink-0 mt-0.5" aria-hidden="true">{t.icon}</span>
-              <p className="text-sm text-stone-600">{t.tip}</p>
+              <p className="text-sm text-ink-700">{t.tip}</p>
             </div>
           ))}
         </div>

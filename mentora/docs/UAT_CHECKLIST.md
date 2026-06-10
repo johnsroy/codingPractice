@@ -12,8 +12,8 @@ npm run db:up && npm run db:migrate && npm run db:seed
 npm run dev          # web → http://localhost:3000 · api → http://localhost:4000
 ```
 **Demo logins** (password `Password123!`): teacher `margaret.chen@mentora.app` ·
-student `student@mentora.app` · guardian `david.park@example.com` · admin
-`admin@mentora.app`.
+student `student@mentora.app` · guardian `david.park@example.com`.
+Admin: `admin@mentora.app` / **`Admin@1234!`**.
 
 > Tip: open the browser console (F12) and watch for red errors during the pass —
 > there should be none.
@@ -87,7 +87,7 @@ student `student@mentora.app` · guardian `david.park@example.com` · admin
 ---
 
 ### Automated coverage already passing (for reference)
-- Unit (shared): **285** · Component (web): **137** · Integration (api): **87** · E2E (Playwright): **64** → **573 automated tests green**, including a full route-by-route UI audit. See [`TESTING.md`](TESTING.md).
+- Unit (shared): **285** · Component (web): **192** · Integration (api): **129** · E2E (Playwright): **64** → **670 automated tests green** (counts grow as features land), including a full route-by-route UI audit. See [`TESTING.md`](TESTING.md).
 
 ### Sign-off
 | Area | Pass / Fail | Notes |

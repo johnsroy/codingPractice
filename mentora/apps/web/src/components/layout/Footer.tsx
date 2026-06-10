@@ -1,28 +1,33 @@
+'use client';
+
 import React from 'react';
 import Link from 'next/link';
 import { GraduationCap } from 'lucide-react';
 import { BRAND } from '@mentora/shared';
-
-const footerLinks = {
-  'Learn': [
-    { href: '/teachers', label: 'Find a Teacher' },
-    { href: '/courses', label: 'Browse Courses' },
-    { href: '/pricing', label: 'Plans & Pricing' },
-    { href: '/tutor', label: 'AI Tutor' },
-  ],
-  'Teach': [
-    { href: '/signup?role=TEACHER', label: 'Become a Mentor' },
-    { href: '/teach/upload', label: 'Upload Materials' },
-    { href: '/teach/courses/new', label: 'Create a Course' },
-    { href: '/pricing#teachers', label: 'Teacher Plans' },
-  ],
-  'Company': [
-    { href: '/pricing', label: 'Pricing' },
-    { href: `mailto:${BRAND.supportEmail}`, label: 'Support' },
-  ],
-};
+import { useT } from '@/i18n';
 
 export function Footer() {
+  const t = useT();
+
+  const footerLinks = {
+    [t('footer.learnCol')]: [
+      { href: '/teachers', label: t('footer.findTeacher') },
+      { href: '/courses', label: t('footer.browseCourses') },
+      { href: '/pricing', label: t('footer.plansAndPricing') },
+      { href: '/tutor', label: t('footer.aiTutor') },
+    ],
+    [t('footer.teachCol')]: [
+      { href: '/signup?role=TEACHER', label: t('footer.becomeAMentor') },
+      { href: '/teach/upload', label: t('footer.uploadMaterials') },
+      { href: '/teach/courses/new', label: t('footer.createACourse') },
+      { href: '/pricing#teachers', label: t('footer.teacherPlans') },
+    ],
+    [t('footer.companyCol')]: [
+      { href: '/pricing', label: t('footer.pricing') },
+      { href: `mailto:${BRAND.supportEmail}`, label: t('footer.support') },
+    ],
+  };
+
   return (
     <footer className="bg-stone-900 text-stone-300 mt-auto">
       <div className="page-container py-16">
@@ -71,7 +76,7 @@ export function Footer() {
         </div>
 
         <div className="pt-8 border-t border-stone-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-stone-500">
-          <p>© {new Date().getFullYear()} {BRAND.name}. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} {BRAND.name}. {t('footer.allRightsReserved')}</p>
           <p className="text-center">{BRAND.shortTagline}</p>
         </div>
       </div>

@@ -90,7 +90,7 @@ test.describe('Pricing page', () => {
 
   test('page heading is visible', async ({ page }) => {
     await expect(
-      page.getByRole('heading', { name: /Simple, transparent pricing/i, level: 1 }),
+      page.getByRole('heading', { name: /Simple pricing/i, level: 1 }),
     ).toBeVisible();
   });
 

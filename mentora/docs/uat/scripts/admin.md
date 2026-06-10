@@ -2,7 +2,7 @@
 
 **Persona:** The Mentora platform administrator. This account is responsible for verifying new teacher profiles, monitoring the marketplace health, and doing sanity checks on listings to make sure the data displayed to users is accurate.
 
-**Account:** `admin@mentora.app` / `Password123!`
+**Account:** `admin@mentora.app` / `Admin@1234!`
 
 > **Note on admin capabilities:** The current web app (`/dashboard`) shows a student-style dashboard for the admin role. The admin-specific management tools (teacher verification, content moderation) are expected to be accessed via the API or a dedicated admin interface in a future sprint. This script therefore covers what the admin can see and confirm through the existing web UI, plus direct verification of key data that the platform promises. Where a full admin UI does not yet exist, the step describes what to confirm and marks the expectation clearly.
 
@@ -22,7 +22,7 @@
 | # | Step | Expected result | Pass / Fail | Notes |
 |---|------|-----------------|-------------|-------|
 | 1 | Open `http://localhost:3000/login` | The sign-in page appears with the Mentora logo, email and password fields, and a "Sign in" button. | | |
-| 2 | Enter email `admin@mentora.app`, password `Password123!`, click **Sign in** | A "Welcome back!" toast appears. The page navigates to `/dashboard`. | | |
+| 2 | Enter email `admin@mentora.app`, password `Admin@1234!`, click **Sign in** | A "Welcome back!" toast appears. The page navigates to `/dashboard`. | | |
 | 3 | Note what the dashboard shows for the admin role | The dashboard currently shows a student-style view (this is expected for the current implementation). The "Hello" greeting and quick actions should appear without error. No JavaScript errors should appear in the browser console (open DevTools > Console to check). | | |
 | 4 | Navigate to `http://localhost:4000/api/health` | The API responds with `{"status":"ok"}` or similar. | | |
 

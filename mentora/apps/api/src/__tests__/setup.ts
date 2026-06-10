@@ -31,6 +31,8 @@ process.env['OCR_DRIVER'] = 'mock'; // deterministic; avoids tesseract WASM work
 process.env['VIDEO_DRIVER'] = 'mock';
 process.env['PAYMENTS_DRIVER'] = 'mock';
 process.env['STORAGE_DRIVER'] = 'local';
+// Use manual verification driver — no Stripe Identity or DigiLocker keys needed.
+process.env['VERIFICATION_DRIVER'] = 'manual';
 
 // Predictable JWT secret for tests.
 process.env['JWT_SECRET'] = 'test-jwt-secret-do-not-use-in-prod';
@@ -59,6 +61,7 @@ beforeEach(async () => {
     "Subscription",
     "Enrollment",
     "Material",
+    "VerificationDocument",
     "ClassSession",
     "Lesson",
     "Course",

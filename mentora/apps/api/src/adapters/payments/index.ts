@@ -14,6 +14,7 @@
 
 import type { Request } from 'express';
 import { splitEarnings, getPlan } from '@mentora/shared';
+import type { ConnectAccountStatus, ConnectOnboardingLink } from '@mentora/shared';
 import { prisma } from '../../lib/prisma';
 import { env } from '../../config/env';
 import { badRequest } from '../../lib/errors';
@@ -24,6 +25,8 @@ export interface CheckoutInput {
   sessionId?: string;
   courseId?: string;
   interval?: 'month' | 'year';
+  /** Display/charge currency. Defaults to 'USD'. */
+  currency?: 'USD' | 'CAD' | 'INR';
   userId: string;
   userEmail: string;
 }
@@ -34,6 +37,13 @@ export interface CheckoutResult {
   url: string;
   /** Immediately resolved payment id (mock only) or Stripe session id. */
   paymentId?: string;
+}
+
+export interface ConnectTeacher {
+  id: string;
+  email: string;
+  name: string;
+  stripeAccountId?: string | null;
 }
 
 export interface PaymentsAdapter {
@@ -52,12 +62,26 @@ export interface PaymentsAdapter {
     totalPlatformFeeCents: number;
     paymentCount: number;
   }>;
+  /**
+   * Create (or resume) a Stripe Connect onboarding link for a teacher.
+   * Returns the URL to redirect to and the (possibly new) stripeAccountId to persist.
+   */
+  createConnectOnboarding(teacher: ConnectTeacher): Promise<{
+    link: ConnectOnboardingLink;
+    stripeAccountId: string;
+  }>;
+  /**
+   * Return the current Stripe Connect account status for a teacher.
+   */
+  getConnectStatus(teacher: { id: string; stripeAccountId?: string | null }): Promise<ConnectAccountStatus>;
 }
 
 // ─── Mock adapter ─────────────────────────────────────────────────────────────
 
 class MockPaymentsAdapter implements PaymentsAdapter {
   async createCheckout(input: CheckoutInput): Promise<CheckoutResult> {
+    const currency = input.currency ?? 'USD';
+
     if (input.kind === 'subscription') {
       const planId = input.planId ?? 'explorer';
       const plan = getPlan(planId);
@@ -96,7 +120,7 @@ class MockPaymentsAdapter implements PaymentsAdapter {
           data: {
             payerId: input.userId,
             amountCents,
-            currency: 'USD',
+            currency,
             kind: 'subscription',
             status: 'succeeded',
             provider: 'mock',
@@ -147,7 +171,7 @@ class MockPaymentsAdapter implements PaymentsAdapter {
         data: {
           payerId: input.userId,
           amountCents: session.priceCents,
-          currency: 'USD',
+          currency,
           kind: 'session',
           status: 'succeeded',
           provider: 'mock',
@@ -198,7 +222,7 @@ class MockPaymentsAdapter implements PaymentsAdapter {
         data: {
           payerId: input.userId,
           amountCents: course.priceCents,
-          currency: 'USD',
+          currency,
           kind: 'course',
           status: 'succeeded',
           provider: 'mock',
@@ -261,6 +285,35 @@ class MockPaymentsAdapter implements PaymentsAdapter {
       paymentCount: payments.length,
     };
   }
+
+  async createConnectOnboarding(teacher: ConnectTeacher): Promise<{
+    link: ConnectOnboardingLink;
+    stripeAccountId: string;
+  }> {
+    const stripeAccountId = teacher.stripeAccountId ?? `acct_mock_${teacher.id}`;
+    return {
+      link: {
+        url: `${env.WEB_URL}/account?connect=mock-complete`,
+        provider: 'mock',
+      },
+      stripeAccountId,
+    };
+  }
+
+  async getConnectStatus(teacher: {
+    id: string;
+    stripeAccountId?: string | null;
+  }): Promise<ConnectAccountStatus> {
+    const connected = !!teacher.stripeAccountId;
+    return {
+      connected,
+      detailsSubmitted: connected,
+      payoutsEnabled: connected,
+      chargesEnabled: connected,
+      onboardingComplete: connected,
+      provider: 'mock',
+    };
+  }
 }
 
 // ─── Stripe adapter (production) ──────────────────────────────────────────────
@@ -279,6 +332,8 @@ class StripePaymentsAdapter implements PaymentsAdapter {
 
   async createCheckout(input: CheckoutInput): Promise<CheckoutResult> {
     const stripe = await this.stripePromise;
+    // Normalise to lowercase for Stripe's currency field (Stripe expects 'usd', 'cad', 'inr')
+    const stripeCurrency = (input.currency ?? 'USD').toLowerCase();
 
     if (input.kind === 'subscription') {
       const plan = getPlan(input.planId ?? 'explorer');
@@ -317,14 +372,18 @@ class StripePaymentsAdapter implements PaymentsAdapter {
       });
       if (!session) throw badRequest('Session not found.');
 
-      const stripeSession = await stripe.checkout.sessions.create({
+      const tier = session.teacher.proTier ? 'pro' : 'standard';
+      const split = splitEarnings(session.priceCents, tier);
+
+      // Build destination charge params when the teacher has completed Connect onboarding.
+      const sessionParams: import('stripe').default.Checkout.SessionCreateParams = {
         mode: 'payment',
         payment_method_types: ['card'],
         customer_email: input.userEmail,
         line_items: [
           {
             price_data: {
-              currency: 'usd',
+              currency: stripeCurrency,
               unit_amount: session.priceCents,
               product_data: { name: session.title },
             },
@@ -334,7 +393,19 @@ class StripePaymentsAdapter implements PaymentsAdapter {
         success_url: `${env.WEB_URL}/sessions/${input.sessionId}?booked=true&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${env.WEB_URL}/sessions/${input.sessionId}`,
         metadata: { userId: input.userId, sessionId: input.sessionId, kind: 'session' },
-      });
+      };
+
+      // Use destination charge when teacher has a connected account (onboarding complete).
+      if (session.teacher.stripeAccountId) {
+        sessionParams.payment_intent_data = {
+          application_fee_amount: split.platformFeeCents,
+          transfer_data: {
+            destination: session.teacher.stripeAccountId,
+          },
+        };
+      }
+
+      const stripeSession = await stripe.checkout.sessions.create(sessionParams);
 
       return {
         provider: 'stripe',
@@ -345,17 +416,24 @@ class StripePaymentsAdapter implements PaymentsAdapter {
 
     if (input.kind === 'course') {
       if (!input.courseId) throw badRequest('courseId required.');
-      const course = await prisma.course.findUnique({ where: { id: input.courseId } });
+      const course = await prisma.course.findUnique({
+        where: { id: input.courseId },
+        include: { teacher: true },
+      });
       if (!course) throw badRequest('Course not found.');
 
-      const stripeSession = await stripe.checkout.sessions.create({
+      const tier = course.teacher.proTier ? 'pro' : 'standard';
+      const split = splitEarnings(course.priceCents, tier);
+
+      // Build destination charge params when the teacher has completed Connect onboarding.
+      const courseParams: import('stripe').default.Checkout.SessionCreateParams = {
         mode: 'payment',
         payment_method_types: ['card'],
         customer_email: input.userEmail,
         line_items: [
           {
             price_data: {
-              currency: 'usd',
+              currency: stripeCurrency,
               unit_amount: course.priceCents,
               product_data: { name: course.title },
             },
@@ -365,7 +443,19 @@ class StripePaymentsAdapter implements PaymentsAdapter {
         success_url: `${env.WEB_URL}/courses/${input.courseId}?enrolled=true&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${env.WEB_URL}/courses/${input.courseId}`,
         metadata: { userId: input.userId, courseId: input.courseId, kind: 'course' },
-      });
+      };
+
+      // Use destination charge when teacher has a connected account (onboarding complete).
+      if (course.teacher.stripeAccountId) {
+        courseParams.payment_intent_data = {
+          application_fee_amount: split.platformFeeCents,
+          transfer_data: {
+            destination: course.teacher.stripeAccountId,
+          },
+        };
+      }
+
+      const stripeSession = await stripe.checkout.sessions.create(courseParams);
 
       return {
         provider: 'stripe',
@@ -512,6 +602,72 @@ class StripePaymentsAdapter implements PaymentsAdapter {
 
   async getEarnings(teacherId: string) {
     return new MockPaymentsAdapter().getEarnings(teacherId);
+  }
+
+  async createConnectOnboarding(teacher: ConnectTeacher): Promise<{
+    link: ConnectOnboardingLink;
+    stripeAccountId: string;
+  }> {
+    const stripe = await this.stripePromise;
+
+    // Create an Express connected account if the teacher doesn't have one yet.
+    let accountId = teacher.stripeAccountId;
+    if (!accountId) {
+      const account = await stripe.accounts.create({
+        type: 'express',
+        email: teacher.email,
+        metadata: { teacherId: teacher.id, name: teacher.name },
+      });
+      accountId = account.id;
+    }
+
+    // Create an Account Link for the onboarding flow.
+    const accountLink = await stripe.accountLinks.create({
+      account: accountId,
+      refresh_url: `${env.WEB_URL}/account?connect=refresh`,
+      return_url: `${env.WEB_URL}/account?connect=done`,
+      type: 'account_onboarding',
+    });
+
+    return {
+      link: {
+        url: accountLink.url,
+        provider: 'stripe',
+      },
+      stripeAccountId: accountId,
+    };
+  }
+
+  async getConnectStatus(teacher: {
+    id: string;
+    stripeAccountId?: string | null;
+  }): Promise<ConnectAccountStatus> {
+    if (!teacher.stripeAccountId) {
+      return {
+        connected: false,
+        detailsSubmitted: false,
+        payoutsEnabled: false,
+        chargesEnabled: false,
+        onboardingComplete: false,
+        provider: 'stripe',
+      };
+    }
+
+    const stripe = await this.stripePromise;
+    const account = await stripe.accounts.retrieve(teacher.stripeAccountId);
+
+    const payoutsEnabled = account.payouts_enabled ?? false;
+    const chargesEnabled = account.charges_enabled ?? false;
+    const detailsSubmitted = account.details_submitted ?? false;
+
+    return {
+      connected: true,
+      detailsSubmitted,
+      payoutsEnabled,
+      chargesEnabled,
+      onboardingComplete: payoutsEnabled && chargesEnabled && detailsSubmitted,
+      provider: 'stripe',
+    };
   }
 }
 

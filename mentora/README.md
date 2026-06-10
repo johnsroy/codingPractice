@@ -4,6 +4,8 @@
 
 ### Where a lifetime of expertise becomes the next generation's head start.
 
+[![Mentora CI](https://github.com/johnsroy/codingPractice/actions/workflows/ci.yml/badge.svg)](https://github.com/johnsroy/codingPractice/actions/workflows/ci.yml)
+
 **Mentora** is a web + mobile learning platform where **retired and seasoned
 professionals teach children grades 1–12** — through self-paced courses, live
 group classrooms, and paid 1:1 coaching. OCR turns any worksheet into a lesson,
@@ -79,11 +81,11 @@ npm run start --workspace=@mentora/mobile
 
 ### Demo logins (created by the seed)
 
-| Role    | Email                | Password       |
-|---------|----------------------|----------------|
-| Teacher | `teacher@mentora.app`| `Password123!` |
-| Guardian| `parent@mentora.app` | `Password123!` |
-| Admin   | `admin@mentora.app`  | `Password123!` |
+| Role    | Email                       | Password       |
+|---------|-----------------------------|----------------|
+| Teacher | `margaret.chen@mentora.app` | `Password123!` |
+| Guardian| `david.park@example.com`    | `Password123!` |
+| Admin   | `admin@mentora.app`         | `Admin@1234!`  |
 
 > Exact seeded accounts are printed by `npm run db:seed`.
 
@@ -101,7 +103,7 @@ production providers by setting environment variables — no code changes:
 | Video      | mock room + token     | LiveKit (low-latency WebRTC)| `VIDEO_DRIVER=livekit` |
 | Payments   | mock (auto-succeed)   | Stripe (Checkout + payouts) | `PAYMENTS_DRIVER=stripe` |
 
-**Docs:** [Architecture](docs/ARCHITECTURE.md) · [Deployment & API keys](docs/DEPLOYMENT.md) · [Testing](docs/TESTING.md) · [UAT checklist](docs/UAT_CHECKLIST.md) · [Roadmap](docs/ROADMAP.md) · [Agent orchestration](docs/ORCHESTRATION.md)
+**Docs:** [Architecture](docs/ARCHITECTURE.md) · [Deployment & API keys](docs/DEPLOYMENT.md) · [Teacher verification](docs/VERIFICATION.md) · [Testing](docs/TESTING.md) · [UAT checklist](docs/UAT_CHECKLIST.md) · [Roadmap](docs/ROADMAP.md) · [Agent orchestration](docs/ORCHESTRATION.md)
 
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full design and
 [`docs/ORCHESTRATION.md`](docs/ORCHESTRATION.md) for how an AI agent team built it.

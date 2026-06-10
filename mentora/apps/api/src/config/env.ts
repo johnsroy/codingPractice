@@ -72,6 +72,13 @@ export const env = {
   STRIPE_WEBHOOK_SECRET: get('STRIPE_WEBHOOK_SECRET', ''),
   STRIPE_PUBLISHABLE_KEY: get('STRIPE_PUBLISHABLE_KEY', ''),
 
+  // Teacher verification
+  VERIFICATION_DRIVER: get('VERIFICATION_DRIVER', 'manual') as 'manual' | 'stripe_identity' | 'digilocker',
+  // DigiLocker OAuth placeholders (stub — wire to real DigiLocker OAuth when ready)
+  DIGILOCKER_CLIENT_ID: get('DIGILOCKER_CLIENT_ID', ''),
+  DIGILOCKER_CLIENT_SECRET: get('DIGILOCKER_CLIENT_SECRET', ''),
+  DIGILOCKER_REDIRECT_URI: get('DIGILOCKER_REDIRECT_URI', ''),
+
   // Commission (can override via env)
   PLATFORM_COMMISSION_PCT: getInt('PLATFORM_COMMISSION_PCT', 15),
   PLATFORM_COMMISSION_PCT_PRO: getInt('PLATFORM_COMMISSION_PCT_PRO', 10),

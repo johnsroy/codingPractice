@@ -19,22 +19,22 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
-    'bg-brand-500 text-white hover:bg-brand-600 active:bg-brand-700 shadow-sm hover:shadow-md',
+    'bg-brand-500 text-white hover:bg-brand-600 active:bg-brand-700 shadow-glow hover:shadow-lift hover:-translate-y-0.5',
   secondary:
-    'bg-teal-500 text-white hover:bg-teal-600 active:bg-teal-700 shadow-sm hover:shadow-md',
+    'bg-teal-500 text-white hover:bg-teal-600 active:bg-teal-700 shadow-soft hover:shadow-lift hover:-translate-y-0.5',
   outline:
-    'border-2 border-brand-500 text-brand-600 bg-white hover:bg-brand-50 active:bg-brand-100',
+    'border-2 border-brand-500 text-brand-700 bg-white/70 hover:bg-brand-50 active:bg-brand-100',
   ghost:
-    'text-brand-600 bg-transparent hover:bg-brand-50 active:bg-brand-100',
+    'text-brand-700 bg-transparent hover:bg-brand-50 active:bg-brand-100',
   danger:
-    'bg-red-500 text-white hover:bg-red-600 active:bg-red-700',
+    'bg-red-500 text-white hover:bg-red-600 active:bg-red-700 shadow-soft',
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
-  sm: 'px-4 py-2 text-sm rounded-lg min-h-[40px]',
-  md: 'px-6 py-3 text-base rounded-xl min-h-[48px]',
-  lg: 'px-8 py-4 text-lg rounded-xl min-h-[52px]',
-  xl: 'px-10 py-5 text-xl rounded-2xl min-h-[60px]',
+  sm: 'px-4 py-2 text-sm rounded-full min-h-[40px]',
+  md: 'px-6 py-3 text-base rounded-full min-h-[48px]',
+  lg: 'px-8 py-4 text-lg rounded-full min-h-[54px]',
+  xl: 'px-10 py-5 text-xl rounded-full min-h-[62px]',
 };
 
 /**

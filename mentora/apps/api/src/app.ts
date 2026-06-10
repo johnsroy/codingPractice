@@ -31,6 +31,7 @@ import { materialsRouter } from './routes/materials';
 import { sessionsRouter } from './routes/sessions';
 import { aiRouter } from './routes/ai';
 import { paymentsRouter } from './routes/payments';
+import { verificationRouter } from './routes/verification';
 
 // ─── App factory ──────────────────────────────────────────────────────────────
 
@@ -104,6 +105,9 @@ export function createApp(): express.Application {
   app.use('/api/sessions', sessionsRouter);
   app.use('/api/ai', aiRouter);
   app.use('/api/payments', paymentsRouter);
+  // Verification routes are mounted at /api directly because their paths
+  // already include /verification/* and /admin/verifications*.
+  app.use('/api', verificationRouter);
 
   // ─── 404 handler ──────────────────────────────────────────────────────────────
 

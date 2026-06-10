@@ -42,7 +42,8 @@ export default function NewCoursePage() {
   function validate() {
     const e: Record<string, string> = {};
     if (!title || title.trim().length < 3) e.title = 'Title must be at least 3 characters.';
-    if (!description || description.trim().length < 10) e.description = 'Description must be at least 10 characters.';
+    if (!description || description.trim().length < 10)
+      e.description = 'Description must be at least 10 characters.';
     if (!subjectId) e.subjectId = 'Please choose a subject.';
     if (!gradeId) e.gradeId = 'Please choose a grade level.';
     return e;
@@ -79,17 +80,21 @@ export default function NewCoursePage() {
   return (
     <div className="section">
       <div className="page-container max-w-2xl">
-        <div className="flex items-center gap-3 mb-8">
-          <div className="w-12 h-12 rounded-2xl bg-brand-50 flex items-center justify-center">
-            <BookOpen size={26} className="text-brand-500" />
-          </div>
-          <div>
-            <h1 className="text-stone-900">Create a new course</h1>
-            <p className="text-stone-500">Share your knowledge with students worldwide.</p>
+        {/* ── Header ── */}
+        <div className="animate-fade-up mb-8">
+          <p className="eyebrow mb-3"><BookOpen size={14} /> Course builder</p>
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-brand-50 flex items-center justify-center">
+              <BookOpen size={26} className="text-brand-500" aria-hidden="true" />
+            </div>
+            <div>
+              <h1 className="text-ink-900">Create a new course</h1>
+              <p className="text-ink-700">Share your knowledge with students worldwide.</p>
+            </div>
           </div>
         </div>
 
-        <Card padding="lg">
+        <Card padding="lg" className="card-lift">
           <form onSubmit={handleSubmit} noValidate className="space-y-6">
             <Input
               label="Course title"
@@ -132,11 +137,11 @@ export default function NewCoursePage() {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-stone-700 mb-1.5">
+              <label className="block text-sm font-semibold text-ink-900 mb-1.5">
                 Price per student (USD)
               </label>
               <div className="flex items-center gap-3">
-                <span className="text-xl font-bold text-stone-500">$</span>
+                <span className="text-xl font-bold text-ink-700">$</span>
                 <input
                   type="number"
                   min={0}
@@ -148,16 +153,23 @@ export default function NewCoursePage() {
                     const dollars = parseFloat(e.target.value) || 0;
                     setPriceCents(Math.round(dollars * 100));
                   }}
-                  className="w-32 bg-white border-2 border-surface-200 rounded-xl px-4 py-3 text-base text-stone-900 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-400 min-h-[48px]"
+                  className="w-32 bg-white border-2 border-surface-200 rounded-xl px-4 py-3 text-base text-ink-900 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-400 min-h-[48px]"
                 />
                 {priceCents === 0 && (
-                  <span className="text-sm text-teal-600 font-semibold">Free (recommended to start)</span>
+                  <span className="text-sm text-teal-600 font-semibold">
+                    Free (recommended to start)
+                  </span>
                 )}
               </div>
             </div>
 
             <div className="flex gap-4 pt-2">
-              <Button type="submit" size="lg" loading={submitting} iconEnd={<ArrowRight size={20} />}>
+              <Button
+                type="submit"
+                size="lg"
+                loading={submitting}
+                iconEnd={<ArrowRight size={20} />}
+              >
                 Create course
               </Button>
               <Button type="button" variant="ghost" size="lg" onClick={() => router.back()}>
