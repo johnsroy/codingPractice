@@ -13,14 +13,15 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import { materialsApi } from '@/lib/api';
-import type { Material } from '@/lib/api';
+import type { Material, StudyKit } from '@/lib/api';
 import type { OcrStatus } from '@mentora/shared';
 import { useAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import { PageSpinner } from '@/components/ui/Spinner';
+import { PageSpinner, Spinner } from '@/components/ui/Spinner';
 import { useToast } from '@/components/ui/Toast';
+import { StudyKitView } from '@/components/features/StudyKitView';
 
 const ACCEPTED = '.pdf,.doc,.docx,.png,.jpg,.jpeg,.mp4,.mp3,.txt';
 const MAX_SIZE_MB = 50;
@@ -32,6 +33,8 @@ interface UploadedFile {
   ocrStatus?: OcrStatus;
   extractedText?: string | null;
   aiSummary?: string | null;
+  studyKit?: StudyKit | null;
+  studyKitLoading?: boolean;
   polling?: boolean;
   error?: string;
 }
@@ -91,6 +94,20 @@ export default function UploadMaterialPage() {
                 : pf,
             ),
           );
+
+          // When OCR completes, try to fetch an auto-generated study kit
+          if (status.ocrStatus === 'done' && f.material) {
+            try {
+              const kit = await materialsApi.getStudyKit(f.material.id);
+              setFiles((prev) =>
+                prev.map((pf) =>
+                  pf.id === f.id ? { ...pf, studyKit: kit } : pf,
+                ),
+              );
+            } catch {
+              // 404 = not yet auto-generated, that's fine
+            }
+          }
         } catch {
           // Silently ignore poll errors
         }
@@ -136,6 +153,26 @@ export default function UploadMaterialPage() {
     const arr = Array.from(fileList);
     await Promise.all(arr.map(uploadFile));
     setUploading(false);
+  }
+
+  async function handleGenerateStudyKit(fileId: string, materialId: string) {
+    setFiles((prev) =>
+      prev.map((f) => (f.id === fileId ? { ...f, studyKitLoading: true } : f)),
+    );
+    try {
+      const kit = await materialsApi.generateStudyKit(materialId);
+      setFiles((prev) =>
+        prev.map((f) =>
+          f.id === fileId ? { ...f, studyKit: kit, studyKitLoading: false } : f,
+        ),
+      );
+      success('Study kit generated!');
+    } catch {
+      setFiles((prev) =>
+        prev.map((f) => (f.id === fileId ? { ...f, studyKitLoading: false } : f)),
+      );
+      toastError('Could not generate study kit. Please try again.');
+    }
   }
 
   const onDrop = useCallback(
@@ -217,79 +254,111 @@ export default function UploadMaterialPage() {
           <div className="mt-10 space-y-4">
             <h2 className="text-lg font-semibold text-ink-900">Your uploads</h2>
             {files.map((f) => (
-              <Card key={f.id} padding="md" className="card-lift">
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-brand-50 flex items-center justify-center shrink-0">
-                    {f.error ? (
-                      <AlertCircle size={20} className="text-red-400" aria-hidden="true" />
-                    ) : f.ocrStatus === 'done' ? (
-                      <CheckCircle2 size={20} className="text-teal-500" aria-hidden="true" />
-                    ) : (
-                      <FileText size={20} className="text-brand-400" aria-hidden="true" />
-                    )}
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <p className="font-semibold text-ink-900 truncate">{f.name}</p>
+              <div key={f.id} className="space-y-4">
+                <Card padding="md" className="card-lift">
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-brand-50 flex items-center justify-center shrink-0">
                       {f.error ? (
-                        <Badge variant="red" size="sm">Failed</Badge>
-                      ) : !f.material ? (
-                        <Badge variant="amber" size="sm">Uploading…</Badge>
+                        <AlertCircle size={20} className="text-red-400" aria-hidden="true" />
+                      ) : f.ocrStatus === 'done' ? (
+                        <CheckCircle2 size={20} className="text-teal-500" aria-hidden="true" />
                       ) : (
-                        <OcrStatusBadge status={f.ocrStatus} />
+                        <FileText size={20} className="text-brand-400" aria-hidden="true" />
                       )}
                     </div>
 
-                    {f.error && (
-                      <p className="text-sm text-red-600 mt-1" role="alert">{f.error}</p>
-                    )}
-
-                    {/* AI Summary */}
-                    {f.aiSummary && (
-                      <div className="mt-4 bg-brand-50 rounded-xl p-4 border border-brand-100">
-                        <p className="text-sm font-semibold text-brand-700 flex items-center gap-2 mb-2">
-                          <Sparkles size={16} aria-hidden="true" />
-                          AI Summary
-                        </p>
-                        <p className="text-sm text-ink-700 leading-relaxed">{f.aiSummary}</p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <p className="font-semibold text-ink-900 truncate">{f.name}</p>
+                        {f.error ? (
+                          <Badge variant="red" size="sm">Failed</Badge>
+                        ) : !f.material ? (
+                          <Badge variant="amber" size="sm">Uploading…</Badge>
+                        ) : (
+                          <OcrStatusBadge status={f.ocrStatus} />
+                        )}
                       </div>
-                    )}
 
-                    {/* Extracted text preview */}
-                    {f.extractedText && !f.aiSummary && (
-                      <details className="mt-3">
-                        <summary className="text-sm text-brand-600 cursor-pointer hover:underline font-medium">
-                          View extracted text
-                        </summary>
-                        <pre className="mt-2 text-xs bg-surface-100 rounded-xl p-4 whitespace-pre-wrap text-ink-700 max-h-48 overflow-y-auto">
-                          {f.extractedText}
-                        </pre>
-                      </details>
-                    )}
+                      {f.error && (
+                        <p className="text-sm text-red-600 mt-1" role="alert">{f.error}</p>
+                      )}
 
-                    {/* Processing spinner */}
-                    {(f.ocrStatus === 'pending' || f.ocrStatus === 'processing') && (
-                      <div className="mt-3 flex items-center gap-2 text-sm text-ink-700">
-                        <Clock
-                          size={16}
-                          className="animate-spin text-amber-500"
-                          aria-hidden="true"
-                        />
-                        Extracting text and generating summary…
-                      </div>
-                    )}
+                      {/* AI Summary */}
+                      {f.aiSummary && (
+                        <div className="mt-4 bg-brand-50 rounded-xl p-4 border border-brand-100">
+                          <p className="text-sm font-semibold text-brand-700 flex items-center gap-2 mb-2">
+                            <Sparkles size={16} aria-hidden="true" />
+                            AI Summary
+                          </p>
+                          <p className="text-sm text-ink-700 leading-relaxed">{f.aiSummary}</p>
+                        </div>
+                      )}
+
+                      {/* Extracted text preview */}
+                      {f.extractedText && !f.aiSummary && (
+                        <details className="mt-3">
+                          <summary className="text-sm text-brand-600 cursor-pointer hover:underline font-medium">
+                            View extracted text
+                          </summary>
+                          <pre className="mt-2 text-xs bg-surface-100 rounded-xl p-4 whitespace-pre-wrap text-ink-700 max-h-48 overflow-y-auto">
+                            {f.extractedText}
+                          </pre>
+                        </details>
+                      )}
+
+                      {/* Processing spinner */}
+                      {(f.ocrStatus === 'pending' || f.ocrStatus === 'processing') && (
+                        <div className="mt-3 flex items-center gap-2 text-sm text-ink-700">
+                          <Clock
+                            size={16}
+                            className="animate-spin text-amber-500"
+                            aria-hidden="true"
+                          />
+                          Extracting text and generating summary…
+                        </div>
+                      )}
+
+                      {/* ── Generate Study Kit button ── */}
+                      {f.ocrStatus === 'done' && f.material && !f.studyKit && (
+                        <div className="mt-4">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            loading={f.studyKitLoading}
+                            icon={<Sparkles size={15} />}
+                            onClick={() => handleGenerateStudyKit(f.id, f.material!.id)}
+                            aria-label={`Generate Study Kit for ${f.name}`}
+                          >
+                            ✨ Generate Study Kit
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+
+                    <button
+                      onClick={() => setFiles((prev) => prev.filter((p) => p.id !== f.id))}
+                      className="p-1.5 rounded-lg text-stone-300 hover:text-stone-600 hover:bg-surface-100 transition-colors min-h-[40px] min-w-[40px] flex items-center justify-center"
+                      aria-label={`Remove ${f.name}`}
+                    >
+                      <X size={18} />
+                    </button>
                   </div>
+                </Card>
 
-                  <button
-                    onClick={() => setFiles((prev) => prev.filter((p) => p.id !== f.id))}
-                    className="p-1.5 rounded-lg text-stone-300 hover:text-stone-600 hover:bg-surface-100 transition-colors min-h-[40px] min-w-[40px] flex items-center justify-center"
-                    aria-label={`Remove ${f.name}`}
-                  >
-                    <X size={18} />
-                  </button>
-                </div>
-              </Card>
+                {/* ── Study Kit View ── */}
+                {f.studyKitLoading && (
+                  <div className="flex items-center gap-3 px-4 py-3 bg-brand-50 rounded-xl border border-brand-100">
+                    <Spinner size="sm" label="Generating study kit…" />
+                    <p className="text-sm text-brand-700">Generating your study kit…</p>
+                  </div>
+                )}
+
+                {f.studyKit && (
+                  <div className="animate-fade-up">
+                    <StudyKitView kit={f.studyKit} />
+                  </div>
+                )}
+              </div>
             ))}
 
             {files.some((f) => f.material) && (

@@ -491,7 +491,7 @@ describe('Currency in checkout (mock adapter)', () => {
     const res = await request(app)
       .post('/api/payments/checkout')
       .set(authHeader(student.accessToken))
-      .send({ kind: 'subscription', planId: 'explorer', currency: 'EUR' });
+      .send({ kind: 'subscription', planId: 'explorer', currency: 'XXX' });
 
     expect(res.status).toBe(400);
     expect(res.body).toHaveProperty('error');

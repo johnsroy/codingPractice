@@ -13,7 +13,7 @@ import { validate } from '../middleware/validate';
 import { asyncHandler } from '../middleware/asyncHandler';
 import { authenticate } from '../middleware/auth';
 import { getLlmAdapter } from '../adapters/llm';
-import type { TutorMessage } from '../adapters/llm';
+import type { TutorMessage, TutorReplyOpts } from '../adapters/llm';
 
 export const aiRouter = Router();
 
@@ -23,17 +23,29 @@ aiRouter.post(
   authenticate,
   validate(aiRequestSchema),
   asyncHandler(async (req, res) => {
-    const { task, materialId, prompt, gradeId, subjectId, context, numQuestions, topic } =
-      req.body as {
-        task: string;
-        materialId?: string;
-        prompt?: string;
-        gradeId?: string;
-        subjectId?: string;
-        context?: string;
-        numQuestions?: number;
-        topic?: string;
-      };
+    const {
+      task,
+      materialId,
+      prompt,
+      gradeId,
+      subjectId,
+      context,
+      numQuestions,
+      topic,
+      history,
+      language,
+    } = req.body as {
+      task: string;
+      materialId?: string;
+      prompt?: string;
+      gradeId?: string;
+      subjectId?: string;
+      context?: string;
+      numQuestions?: number;
+      topic?: string;
+      history?: { role: 'user' | 'assistant'; content: string }[];
+      language?: string;
+    };
 
     const llm = getLlmAdapter();
 
@@ -92,8 +104,34 @@ aiRouter.post(
 
       case 'tutor_chat': {
         if (!prompt) throw badRequest('A prompt (message) is required for tutor chat.');
-        const messages: TutorMessage[] = [{ role: 'user', content: prompt }];
-        const reply = await llm.tutorReply(messages);
+
+        // Resolve optional materialText for context
+        let materialText: string | undefined;
+        if (materialId) {
+          try {
+            const mat = await prisma.material.findUnique({
+              where: { id: materialId },
+              select: { extractedText: true },
+            });
+            materialText = mat?.extractedText ?? undefined;
+          } catch {
+            // non-fatal
+          }
+        }
+
+        // Build message history: prior turns + current prompt
+        const historyMsgs: TutorMessage[] = Array.isArray(history) ? history : [];
+        const messages: TutorMessage[] = [...historyMsgs, { role: 'user', content: prompt }];
+
+        const tutorOpts: TutorReplyOpts = {
+          messages,
+          language,
+          gradeId,
+          subjectId,
+          materialText,
+        };
+
+        const reply = await llm.tutorReply(tutorOpts);
         return res.json({ task, result: reply });
       }
 
@@ -151,8 +189,7 @@ aiRouter.post(
 );
 
 // GET /ai/tutor/stream — Server-Sent Events streaming tutor reply
-// Query params: ?message=<url-encoded user message>
-// OR body can carry a JSON array of messages (for multi-turn).
+// Query params: ?message=<url-encoded user message>&language=<lang>&materialId=<id>&gradeId=<g>&subjectId=<s>
 aiRouter.get(
   '/tutor/stream',
   authenticate,
@@ -171,11 +208,31 @@ aiRouter.get(
       return;
     }
 
+    const language = req.query['language'] as string | undefined;
+    const materialId = req.query['materialId'] as string | undefined;
+    const gradeId = req.query['gradeId'] as string | undefined;
+    const subjectId = req.query['subjectId'] as string | undefined;
+
+    // Resolve optional materialText
+    let materialText: string | undefined;
+    if (materialId) {
+      try {
+        const mat = await prisma.material.findUnique({
+          where: { id: materialId },
+          select: { extractedText: true },
+        });
+        materialText = mat?.extractedText ?? undefined;
+      } catch {
+        // non-fatal
+      }
+    }
+
     const messages: TutorMessage[] = [{ role: 'user', content: userMessage }];
+    const tutorOpts: TutorReplyOpts = { messages, language, gradeId, subjectId, materialText };
     const llm = getLlmAdapter();
 
     try {
-      for await (const chunk of llm.streamTutorReply(messages)) {
+      for await (const chunk of llm.streamTutorReply(tutorOpts)) {
         // SSE data must be a single line; escape newlines
         const safe = JSON.stringify(chunk);
         res.write(`data: ${safe}\n\n`);
@@ -195,7 +252,8 @@ aiRouter.get(
   },
 );
 
-// POST /ai/tutor/stream — multi-turn SSE (body: { messages: TutorMessage[] })
+// POST /ai/tutor/stream — multi-turn SSE
+// Body: { messages: TutorMessage[], language?, materialId?, gradeId?, subjectId? }
 aiRouter.post(
   '/tutor/stream',
   authenticate,
@@ -206,17 +264,39 @@ aiRouter.post(
     res.setHeader('X-Accel-Buffering', 'no');
     res.flushHeaders();
 
-    const { messages } = req.body as { messages?: TutorMessage[] };
+    const { messages, language, materialId, gradeId, subjectId } = req.body as {
+      messages?: TutorMessage[];
+      language?: string;
+      materialId?: string;
+      gradeId?: string;
+      subjectId?: string;
+    };
+
     if (!Array.isArray(messages) || messages.length === 0) {
       res.write(`event: error\ndata: ${JSON.stringify({ error: 'messages array is required' })}\n\n`);
       res.end();
       return;
     }
 
+    // Resolve optional materialText
+    let materialText: string | undefined;
+    if (materialId) {
+      try {
+        const mat = await prisma.material.findUnique({
+          where: { id: materialId },
+          select: { extractedText: true },
+        });
+        materialText = mat?.extractedText ?? undefined;
+      } catch {
+        // non-fatal
+      }
+    }
+
+    const tutorOpts: TutorReplyOpts = { messages, language, gradeId, subjectId, materialText };
     const llm = getLlmAdapter();
 
     try {
-      for await (const chunk of llm.streamTutorReply(messages)) {
+      for await (const chunk of llm.streamTutorReply(tutorOpts)) {
         res.write(`data: ${JSON.stringify(chunk)}\n\n`);
         if (typeof (res as unknown as { flush?: () => void }).flush === 'function') {
           (res as unknown as { flush: () => void }).flush();
