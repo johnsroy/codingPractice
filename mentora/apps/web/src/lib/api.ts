@@ -33,6 +33,10 @@ import {
   type VerificationSummary,
   type VerificationDocument,
   type VerificationDocKind,
+  type GeoInfo,
+  type StudyKit,
+  type Flashcard,
+  type KeyTerm,
 } from '@mentora/shared';
 
 // Re-export for convenience in the rest of the app
@@ -61,6 +65,10 @@ export type {
   VerificationSummary,
   VerificationDocument,
   VerificationDocKind,
+  GeoInfo,
+  StudyKit,
+  Flashcard,
+  KeyTerm,
 };
 
 // ------------------------------------------------------------------ //
@@ -273,6 +281,22 @@ export const materialsApi = {
     const qs = courseId ? `?courseId=${courseId}` : '';
     return request<Material[]>(`${API_ROUTES.materials.list}${qs}`);
   },
+
+  /** Fetch the AI Study Kit for a material (404 if not generated yet). */
+  getStudyKit: (id: string) =>
+    request<StudyKit>(API_ROUTES.materials.studyKit(id)),
+
+  /** Generate (or regenerate) the AI Study Kit from the material's text. */
+  generateStudyKit: (id: string) =>
+    request<StudyKit>(API_ROUTES.materials.studyKit(id), { method: 'POST' }),
+};
+
+// ------------------------------------------------------------------ //
+// Geolocation (suggested currency by region)
+// ------------------------------------------------------------------ //
+
+export const geoApi = {
+  detect: () => request<GeoInfo>(API_ROUTES.geo),
 };
 
 // ------------------------------------------------------------------ //

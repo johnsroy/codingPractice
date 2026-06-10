@@ -74,6 +74,13 @@ export const aiRequestSchema = z.object({
   numQuestions: z.number().int().min(1).max(20).optional(),
   /** The subject/topic to research (used by research_topic). */
   topic: z.string().min(2).max(300).optional(),
+  /** Conversation history for the tutor (most-recent last). */
+  history: z
+    .array(z.object({ role: z.enum(['user', 'assistant']), content: z.string().max(8000) }))
+    .max(40)
+    .optional(),
+  /** BCP-47-ish language code the AI should reply in (e.g. "hi", "pa", "bn", "en"). */
+  language: z.string().max(12).optional(),
 });
 
 /** Dedicated payload for the agentic topic-research endpoint. */
@@ -90,7 +97,14 @@ export const checkoutSchema = z.object({
   courseId: z.string().optional(),
   interval: z.enum(['month', 'year']).optional(),
   /** Display/charge currency; Stripe charges in this currency. */
-  currency: z.enum(['USD', 'CAD', 'INR']).optional(),
+  currency: z
+    .enum([
+      'USD', 'CAD', 'GBP', 'EUR', 'AUD', 'AED', 'SGD',
+      'INR', 'PKR', 'BDT', 'LKR', 'NPR',
+      'NGN', 'KES', 'ZAR', 'EGP',
+      'PHP', 'IDR', 'VND', 'BRL', 'MXN',
+    ])
+    .optional(),
 });
 
 export const submitVerificationSchema = z.object({

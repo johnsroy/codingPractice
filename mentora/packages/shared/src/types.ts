@@ -77,6 +77,8 @@ export interface Material {
   extractedText?: string | null;
   /** AI-generated summary of the material. */
   aiSummary?: string | null;
+  /** AI "Study Kit" (summary, key terms, flashcards, quiz) when generated. */
+  studyKit?: StudyKit | null;
   createdAt: ISODateString;
 }
 
@@ -137,6 +139,38 @@ export interface AiQuizQuestion {
   options: string[];
   answerIndex: number;
   explanation: string;
+}
+
+/** Geolocation result used to suggest a currency/region. */
+export interface GeoInfo {
+  country: string | null; // ISO-3166 alpha-2
+  currency: string; // suggested display currency
+  tier: 'T1' | 'T2' | 'T3' | 'T4' | null;
+}
+
+/** A single flashcard derived from a material. */
+export interface Flashcard {
+  front: string;
+  back: string;
+}
+
+export interface KeyTerm {
+  term: string;
+  definition: string;
+}
+
+/**
+ * The "AI Study Kit" generated from an uploaded material's OCR text:
+ * a summary, key terms, flashcards and a practice quiz.
+ */
+export interface StudyKit {
+  summary: string;
+  keyTerms: KeyTerm[];
+  flashcards: Flashcard[];
+  quiz: AiQuizQuestion[];
+  /** Reading level the kit was tuned for, e.g. "grade-5". */
+  gradeId?: string | null;
+  generatedAt?: ISODateString;
 }
 
 /** A single web source returned by the research/search adapter. */
