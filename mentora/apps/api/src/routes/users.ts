@@ -110,12 +110,13 @@ usersRouter.get(
       prisma.user.count({ where }),
     ]);
 
-    res.json({
-      items: users.map(toUserPublic),
-      total,
-      page: pageNum,
-      pageSize: size,
-    });
+    // Return a bare array — matches the client contract (usersApi.teachers ->
+    // UserPublic[]) used by the directory + Featured Teachers. Pagination meta
+    // travels in headers.
+    res.setHeader('X-Total-Count', String(total));
+    res.setHeader('X-Page', String(pageNum));
+    res.setHeader('X-Page-Size', String(size));
+    res.json(users.map(toUserPublic));
   }),
 );
 
