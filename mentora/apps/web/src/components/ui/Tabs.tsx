@@ -27,10 +27,23 @@ export function Tabs({ tabs, defaultTab, onChange, children, className }: TabsPr
 
   return (
     <div className={className}>
+      {/* Tab strip: scrolls horizontally on mobile so no tab is ever clipped.
+          -webkit-overflow-scrolling handled via the `overflow-x-auto` Tailwind
+          utility which maps to `overflow: auto` — browsers apply momentum scroll
+          automatically on iOS 13+. Hide the scrollbar visually but keep it
+          accessible via scrollbar-width/scrollbar-color resets. */}
       <div
         role="tablist"
-        className="flex gap-1 p-1 bg-surface-100 rounded-xl mb-6 overflow-x-auto"
+        className={[
+          'flex gap-1 p-1 bg-surface-100 rounded-xl mb-6',
+          /* horizontal scroll on small screens */
+          'overflow-x-auto',
+          /* hide scrollbar visually (WebKit + standard) while keeping scrollability */
+          '[&::-webkit-scrollbar]:hidden [scrollbar-width:none]',
+        ].join(' ')}
         aria-label="Tabs"
+        /* iOS momentum scroll */
+        style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
       >
         {tabs.map((tab) => (
           <button
@@ -41,7 +54,11 @@ export function Tabs({ tabs, defaultTab, onChange, children, className }: TabsPr
             id={`tab-${tab.id}`}
             onClick={() => handleChange(tab.id)}
             className={clsx(
-              'flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg',
+              /* On mobile each tab keeps its natural size and does NOT expand to
+                 fill the strip — this prevents tabs from squishing below their
+                 min-width and getting clipped.
+                 On sm+ screens we restore flex-1 so tabs share the available width. */
+              'shrink-0 sm:flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg',
               'text-sm font-semibold transition-all duration-150 whitespace-nowrap min-h-[44px]',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500',
               active === tab.id

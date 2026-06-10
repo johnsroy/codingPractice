@@ -108,16 +108,24 @@ export default function AccountPage() {
       <div className="page-container max-w-3xl">
 
         {/* ── Hero header ── */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-900 via-brand-800 to-teal-800 p-8 mb-10 text-white shadow-lift">
+        {/* p-5 on mobile → p-8 on sm+ keeps the card from feeling cramped on 360px screens */}
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-900 via-brand-800 to-teal-800 p-5 sm:p-8 mb-8 sm:mb-10 text-white shadow-lift">
           {/* Decorative blobs */}
           <span className="blob w-56 h-56 bg-brand-400/20 -top-16 -right-16" aria-hidden="true" />
           <span className="blob w-40 h-40 bg-teal-400/20 bottom-0 left-0" aria-hidden="true" />
 
-          <div className="relative flex items-center gap-5">
-            <Avatar src={user?.avatarUrl} name={user?.name} size="xl" className="ring-4 ring-white/30" />
+          <div className="relative flex items-center gap-4 sm:gap-5 min-w-0">
+            {/* Avatar shrinks slightly on mobile */}
+            <Avatar src={user?.avatarUrl} name={user?.name} size="xl" className="ring-4 ring-white/30 shrink-0" />
+            {/* min-w-0 prevents the flex child from overflowing the card */}
             <div className="flex-1 min-w-0">
-              <h1 className="text-white text-3xl mb-0.5">{user?.name}</h1>
-              <p className="text-brand-200 text-sm">{user?.email}</p>
+              <h1 className="text-white text-2xl sm:text-3xl mb-0.5 truncate">{user?.name}</h1>
+              {/* Truncate long emails on narrow screens — the full address is still
+                  accessible via title attribute for sighted users and is read by
+                  screen readers from the element text. */}
+              <p className="text-brand-200 text-sm truncate" title={user?.email}>
+                {user?.email}
+              </p>
               <div className="flex flex-wrap gap-2 mt-3">
                 <Badge variant="outline" size="sm" className="border-white/40 text-white bg-white/10">
                   {user?.role}

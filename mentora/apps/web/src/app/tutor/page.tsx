@@ -26,6 +26,7 @@ import {
   GraduationCap,
   Globe,
   MessageSquare,
+  Menu,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { aiApi, materialsApi } from '@/lib/api';
@@ -267,22 +268,28 @@ interface SidebarProps {
   conversations: Conversation[];
   activeId: string;
   collapsed: boolean;
+  /** Mobile-only: whether the drawer is open */
+  drawerOpen: boolean;
   onSelect: (id: string) => void;
   onNew: () => void;
   onDelete: (id: string) => void;
   onRename: (id: string, title: string) => void;
   onToggle: () => void;
+  /** Mobile-only: close the drawer */
+  onDrawerClose: () => void;
 }
 
 function Sidebar({
   conversations,
   activeId,
   collapsed,
+  drawerOpen,
   onSelect,
   onNew,
   onDelete,
   onRename,
   onToggle,
+  onDrawerClose,
 }: SidebarProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -302,131 +309,188 @@ function Sidebar({
     setEditingId(null);
   };
 
-  return (
-    <aside
-      className={clsx(
-        'flex flex-col bg-white border-r border-surface-200 transition-all duration-300 shrink-0',
-        collapsed ? 'w-12' : 'w-64',
-      )}
-      aria-label="Chat conversations sidebar"
-    >
+  // Shared inner content — rendered both in the desktop aside and the mobile drawer
+  const innerContent = (
+    <>
       {/* Toggle + New chat row */}
       <div className="flex items-center gap-2 p-3 border-b border-surface-200">
+        {/* Desktop collapse toggle — hidden inside the mobile drawer */}
         <button
           type="button"
           onClick={onToggle}
-          className="w-9 h-9 rounded-lg flex items-center justify-center text-ink-700 hover:bg-surface-100 focus-visible:ring-2 focus-visible:ring-brand-500 transition-colors"
+          className="w-9 h-9 rounded-lg hidden lg:flex items-center justify-center text-ink-700 hover:bg-surface-100 focus-visible:ring-2 focus-visible:ring-brand-500 transition-colors"
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
         </button>
-        {!collapsed && (
-          <button
-            type="button"
-            onClick={onNew}
-            className="flex-1 flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold text-brand-700 hover:bg-brand-50 focus-visible:ring-2 focus-visible:ring-brand-500 transition-colors min-h-[40px]"
-            aria-label="Start a new conversation"
-          >
-            <Plus size={16} aria-hidden="true" />
-            New chat
-          </button>
-        )}
+        {/* Mobile close button — shown only inside the drawer */}
+        <button
+          type="button"
+          onClick={onDrawerClose}
+          className="w-9 h-9 rounded-lg flex lg:hidden items-center justify-center text-ink-700 hover:bg-surface-100 focus-visible:ring-2 focus-visible:ring-brand-500 transition-colors"
+          aria-label="Close conversations drawer"
+        >
+          <X size={18} />
+        </button>
+        <button
+          type="button"
+          onClick={onNew}
+          className="flex-1 flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold text-brand-700 hover:bg-brand-50 focus-visible:ring-2 focus-visible:ring-brand-500 transition-colors min-h-[40px]"
+          aria-label="Start a new conversation"
+        >
+          <Plus size={16} aria-hidden="true" />
+          New chat
+        </button>
       </div>
 
       {/* Conversation list */}
-      {!collapsed && (
-        <nav className="flex-1 overflow-y-auto p-2 space-y-1" aria-label="Previous conversations">
-          {conversations.length === 0 && (
-            <p className="text-xs text-ink-500 text-center py-4 px-2">
-              No conversations yet.
-            </p>
-          )}
-          {conversations.map((conv) => (
-            <div
-              key={conv.id}
-              className={clsx(
-                'group flex items-center gap-2 rounded-lg px-2 py-2 cursor-pointer transition-colors',
-                conv.id === activeId
-                  ? 'bg-brand-50 text-brand-700'
-                  : 'text-ink-700 hover:bg-surface-100',
-              )}
-              onClick={() => {
-                if (editingId !== conv.id) onSelect(conv.id);
-              }}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') onSelect(conv.id);
-              }}
-              aria-current={conv.id === activeId ? 'page' : undefined}
-            >
-              <MessageSquare size={14} className="shrink-0" aria-hidden="true" />
+      <nav className="flex-1 overflow-y-auto p-2 space-y-1" aria-label="Previous conversations">
+        {conversations.length === 0 && (
+          <p className="text-xs text-ink-500 text-center py-4 px-2">
+            No conversations yet.
+          </p>
+        )}
+        {conversations.map((conv) => (
+          <div
+            key={conv.id}
+            className={clsx(
+              'group flex items-center gap-2 rounded-lg px-2 py-2 cursor-pointer transition-colors',
+              conv.id === activeId
+                ? 'bg-brand-50 text-brand-700'
+                : 'text-ink-700 hover:bg-surface-100',
+            )}
+            onClick={() => {
+              if (editingId !== conv.id) {
+                onSelect(conv.id);
+                onDrawerClose(); // auto-close drawer on mobile after selecting
+              }
+            }}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                onSelect(conv.id);
+                onDrawerClose();
+              }
+            }}
+            aria-current={conv.id === activeId ? 'page' : undefined}
+          >
+            <MessageSquare size={14} className="shrink-0" aria-hidden="true" />
 
-              {editingId === conv.id ? (
-                <input
-                  ref={editRef}
-                  value={editValue}
-                  onChange={(e) => setEditValue(e.target.value)}
-                  onBlur={() => commitEdit(conv.id)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') commitEdit(conv.id);
-                    if (e.key === 'Escape') setEditingId(null);
-                    e.stopPropagation();
-                  }}
-                  className="flex-1 text-xs bg-white border border-brand-300 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-brand-500"
-                  onClick={(e) => e.stopPropagation()}
-                  aria-label="Rename conversation"
-                />
-              ) : (
-                <span className="flex-1 text-xs truncate font-medium">
-                  {conv.title}
-                </span>
-              )}
-
-              {/* Action buttons */}
-              <div
-                className="hidden group-hover:flex items-center gap-1"
+            {editingId === conv.id ? (
+              <input
+                ref={editRef}
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                onBlur={() => commitEdit(conv.id)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') commitEdit(conv.id);
+                  if (e.key === 'Escape') setEditingId(null);
+                  e.stopPropagation();
+                }}
+                className="flex-1 text-xs bg-white border border-brand-300 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-brand-500"
                 onClick={(e) => e.stopPropagation()}
-              >
-                {editingId === conv.id ? (
-                  <button
-                    type="button"
-                    onClick={() => commitEdit(conv.id)}
-                    className="p-1 rounded hover:bg-brand-100 text-brand-600"
-                    aria-label="Save rename"
-                  >
-                    <Check size={12} />
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      startEdit(conv.id, conv.title);
-                    }}
-                    className="p-1 rounded hover:bg-surface-200 text-ink-500"
-                    aria-label={`Rename conversation "${conv.title}"`}
-                  >
-                    <Pencil size={12} />
-                  </button>
-                )}
+                aria-label="Rename conversation"
+              />
+            ) : (
+              <span className="flex-1 text-xs truncate font-medium">
+                {conv.title}
+              </span>
+            )}
+
+            {/* Action buttons */}
+            <div
+              className="hidden group-hover:flex items-center gap-1"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {editingId === conv.id ? (
+                <button
+                  type="button"
+                  onClick={() => commitEdit(conv.id)}
+                  className="p-1 rounded hover:bg-brand-100 text-brand-600"
+                  aria-label="Save rename"
+                >
+                  <Check size={12} />
+                </button>
+              ) : (
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    onDelete(conv.id);
+                    startEdit(conv.id, conv.title);
                   }}
-                  className="p-1 rounded hover:bg-red-100 text-red-500"
-                  aria-label={`Delete conversation "${conv.title}"`}
+                  className="p-1 rounded hover:bg-surface-200 text-ink-500"
+                  aria-label={`Rename conversation "${conv.title}"`}
                 >
-                  <Trash2 size={12} />
+                  <Pencil size={12} />
                 </button>
-              </div>
+              )}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(conv.id);
+                }}
+                className="p-1 rounded hover:bg-red-100 text-red-500"
+                aria-label={`Delete conversation "${conv.title}"`}
+              >
+                <Trash2 size={12} />
+              </button>
             </div>
-          ))}
-        </nav>
+          </div>
+        ))}
+      </nav>
+    </>
+  );
+
+  return (
+    <>
+      {/* ── Desktop sidebar (lg+) ── */}
+      <aside
+        className={clsx(
+          'hidden lg:flex flex-col bg-white border-r border-surface-200 transition-all duration-300 shrink-0',
+          collapsed ? 'w-12' : 'w-64',
+        )}
+        aria-label="Chat conversations sidebar"
+      >
+        {collapsed ? (
+          /* Collapsed: just show the expand toggle */
+          <div className="flex items-center justify-center p-3 border-b border-surface-200">
+            <button
+              type="button"
+              onClick={onToggle}
+              className="w-9 h-9 rounded-lg flex items-center justify-center text-ink-700 hover:bg-surface-100 focus-visible:ring-2 focus-visible:ring-brand-500 transition-colors"
+              aria-label="Expand sidebar"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        ) : (
+          innerContent
+        )}
+      </aside>
+
+      {/* ── Mobile drawer (< lg) ── */}
+      {/* Backdrop */}
+      {drawerOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 lg:hidden"
+          aria-hidden="true"
+          onClick={onDrawerClose}
+        />
       )}
-    </aside>
+      {/* Drawer panel */}
+      <div
+        className={clsx(
+          'fixed inset-y-0 left-0 z-50 flex flex-col w-72 max-w-[85vw] bg-white shadow-lift transition-transform duration-300 lg:hidden',
+          drawerOpen ? 'translate-x-0' : '-translate-x-full',
+        )}
+        aria-label="Chat conversations sidebar"
+        aria-hidden={!drawerOpen}
+      >
+        {innerContent}
+      </div>
+    </>
   );
 }
 
@@ -444,6 +508,8 @@ interface ContextControlsProps {
   onGradeChange: (v: string) => void;
   onMaterialChange: (v: string) => void;
   lang: string;
+  /** Mobile-only: open the conversations drawer */
+  onOpenDrawer: () => void;
 }
 
 function ContextControls({
@@ -456,16 +522,28 @@ function ContextControls({
   onGradeChange,
   onMaterialChange,
   lang,
+  onOpenDrawer,
 }: ContextControlsProps) {
   return (
-    <div className="flex flex-wrap items-center gap-3 px-4 py-3 bg-surface-50 border-b border-surface-200">
+    <div className="flex flex-wrap items-center gap-2 px-3 py-2 bg-surface-50 border-b border-surface-200 min-w-0">
+      {/* Mobile "Chats" menu button — hidden on lg+ where the sidebar is always visible */}
+      <button
+        type="button"
+        onClick={onOpenDrawer}
+        className="flex lg:hidden items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-brand-700 hover:bg-brand-50 focus-visible:ring-2 focus-visible:ring-brand-500 transition-colors min-h-[36px] shrink-0"
+        aria-label="Open chat history"
+      >
+        <Menu size={15} aria-hidden="true" />
+        Chats
+      </button>
+
       {/* Subject */}
-      <div className="flex items-center gap-2">
-        <GraduationCap size={16} className="text-brand-500 shrink-0" aria-hidden="true" />
+      <div className="flex items-center gap-1.5">
+        <GraduationCap size={15} className="text-brand-500 shrink-0" aria-hidden="true" />
         <select
           value={subjectId}
           onChange={(e) => onSubjectChange(e.target.value)}
-          className="text-xs border border-surface-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 text-ink-800 min-h-[36px] cursor-pointer"
+          className="text-xs border border-surface-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 text-ink-800 min-h-[36px] cursor-pointer max-w-[120px]"
           aria-label="Select subject"
         >
           <option value="">Any subject</option>
@@ -478,11 +556,11 @@ function ContextControls({
       </div>
 
       {/* Grade */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5">
         <select
           value={gradeId}
           onChange={(e) => onGradeChange(e.target.value)}
-          className="text-xs border border-surface-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 text-ink-800 min-h-[36px] cursor-pointer"
+          className="text-xs border border-surface-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 text-ink-800 min-h-[36px] cursor-pointer max-w-[100px]"
           aria-label="Select grade"
         >
           <option value="">Any grade</option>
@@ -495,16 +573,16 @@ function ContextControls({
       </div>
 
       {/* Material */}
-      <div className="flex items-center gap-2">
-        <Paperclip size={16} className="text-teal-500 shrink-0" aria-hidden="true" />
+      <div className="flex items-center gap-1.5 min-w-0">
+        <Paperclip size={15} className="text-teal-500 shrink-0" aria-hidden="true" />
         <select
           value={materialId}
           onChange={(e) => onMaterialChange(e.target.value)}
-          className="text-xs border border-surface-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 text-ink-800 min-h-[36px] cursor-pointer max-w-[180px]"
+          className="text-xs border border-surface-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 text-ink-800 min-h-[36px] cursor-pointer max-w-[120px]"
           aria-label="Attach a material"
           disabled={materialsLoading}
         >
-          <option value="">No material attached</option>
+          <option value="">No material</option>
           {materials.map((m) => (
             <option key={m.id} value={m.id}>
               {m.title ?? m.id}
@@ -524,8 +602,8 @@ function ContextControls({
       </div>
 
       {/* Language indicator */}
-      <div className="ml-auto flex items-center gap-1.5">
-        <Globe size={14} className="text-ink-500" aria-hidden="true" />
+      <div className="ml-auto flex items-center gap-1 shrink-0">
+        <Globe size={13} className="text-ink-500" aria-hidden="true" />
         <span className="text-xs text-ink-500 font-medium">
           {LANGUAGE_LABELS[lang] ?? lang.toUpperCase()}
         </span>
@@ -561,11 +639,24 @@ export default function TutorPage() {
   });
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  // Mobile drawer — closed by default so chat panel is full-width on phones
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Hydration guard: localStorage-backed conversations + timestamps only exist on
   // the client, so we render a stable shell until mounted to avoid SSR mismatch.
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+
+  // Close the mobile drawer when the viewport grows past the lg breakpoint
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const handler = (e: MediaQueryListEvent) => {
+      if (e.matches) setDrawerOpen(false);
+    };
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
 
   // ── Context controls ────────────────────────────────────────────────────
   const [subjectId, setSubjectId] = useState('');
@@ -915,17 +1006,18 @@ export default function TutorPage() {
     <div className="section">
       <div className="page-container max-w-6xl">
         {/* ── Header ── */}
-        <div className="flex items-center gap-4 mb-6 animate-fade-up">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-500 to-teal-500 flex items-center justify-center shadow-glow">
-            <Bot size={30} className="text-white" aria-hidden="true" />
+        <div className="flex items-center gap-3 mb-5 animate-fade-up flex-wrap">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-brand-500 to-teal-500 flex items-center justify-center shadow-glow shrink-0">
+            <Bot size={26} className="text-white sm:hidden" aria-hidden="true" />
+            <Bot size={30} className="text-white hidden sm:block" aria-hidden="true" />
           </div>
-          <div>
+          <div className="min-w-0">
             <h1 className="text-ink-900">AI Tutor</h1>
-            <p className="text-ink-700">Ask anything — I&apos;m here to help you learn.</p>
+            <p className="text-ink-700 text-sm sm:text-base">Ask anything — I&apos;m here to help you learn.</p>
           </div>
           <div className="ml-auto flex items-center gap-3">
             {!isAuthenticated && (
-              <Badge variant="amber" size="md">
+              <Badge variant="amber" size="md" className="hidden sm:inline-flex">
                 Sign in for unlimited questions
               </Badge>
             )}
@@ -933,7 +1025,7 @@ export default function TutorPage() {
         </div>
 
         {/* ── Quick actions ── */}
-        <div className="flex flex-wrap gap-3 mb-5">
+        <div className="flex flex-wrap gap-2 sm:gap-3 mb-4 sm:mb-5">
           {quickActions.map((a) => (
             <Button
               key={a.id}
@@ -949,12 +1041,19 @@ export default function TutorPage() {
         </div>
 
         {/* ── Main layout: sidebar + chat ── */}
-        <div className="overflow-hidden shadow-lift flex rounded-xl border border-surface-200 bg-white" style={{ minHeight: '580px', maxHeight: '80vh' }}>
-          {/* Sidebar */}
+        {/* On mobile (< lg): only the chat panel is shown; the sidebar becomes a
+            slide-in drawer toggled by the "Chats" button inside ContextControls.
+            On lg+: the desktop sidebar is always rendered alongside the chat. */}
+        <div
+          className="overflow-hidden shadow-lift flex rounded-xl border border-surface-200 bg-white"
+          style={{ minHeight: '580px', maxHeight: '80vh' }}
+        >
+          {/* Sidebar (desktop) + Drawer (mobile) */}
           <Sidebar
             conversations={conversations}
             activeId={activeId}
             collapsed={sidebarCollapsed}
+            drawerOpen={drawerOpen}
             onSelect={(id) => {
               setActiveId(id);
               setShowFollowUps(false);
@@ -963,11 +1062,12 @@ export default function TutorPage() {
             onDelete={deleteConversation}
             onRename={renameConversation}
             onToggle={() => setSidebarCollapsed((v) => !v)}
+            onDrawerClose={() => setDrawerOpen(false)}
           />
 
-          {/* Chat panel */}
-          <div className="flex-1 flex flex-col min-w-0">
-            {/* Context controls */}
+          {/* Chat panel — always full-width on mobile; shares space with sidebar on lg+ */}
+          <div className="flex-1 flex flex-col min-w-0 w-0">
+            {/* Context controls (includes mobile "Chats" toggle button) */}
             <ContextControls
               subjectId={subjectId}
               gradeId={gradeId}
@@ -978,11 +1078,12 @@ export default function TutorPage() {
               onGradeChange={setGradeId}
               onMaterialChange={setMaterialId}
               lang={lang}
+              onOpenDrawer={() => setDrawerOpen(true)}
             />
 
             {/* Messages */}
             <div
-              className="flex-1 overflow-y-auto p-5 space-y-5"
+              className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-5 min-w-0"
               aria-live="polite"
               aria-label="Chat messages"
             >
@@ -995,10 +1096,10 @@ export default function TutorPage() {
                   <h2 className="text-lg font-semibold text-ink-900 mb-2">
                     What would you like to learn today?
                   </h2>
-                  <p className="text-sm text-ink-700 mb-6 max-w-sm">
+                  <p className="text-sm text-ink-700 mb-6 max-w-sm px-2">
                     Choose a topic below or type your own question to get started.
                   </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full max-w-lg">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full max-w-lg px-1">
                     {STARTER_PROMPTS.map((sp, i) => (
                       <button
                         key={i}
@@ -1036,7 +1137,7 @@ export default function TutorPage() {
               {/* Follow-up chips */}
               {showFollowUps && !loading && messages.length > 1 && (
                 <div
-                  className="flex flex-wrap gap-2 pl-14 animate-fade-up"
+                  className="flex flex-wrap gap-2 pl-2 sm:pl-14 animate-fade-up"
                   aria-label="Follow-up suggestions"
                 >
                   {FOLLOW_UP_CHIPS.map((chip) => (
@@ -1061,7 +1162,7 @@ export default function TutorPage() {
             </div>
 
             {/* Input area */}
-            <div className="border-t border-surface-200 p-4 flex gap-3 items-end bg-surface-50">
+            <div className="border-t border-surface-200 p-3 sm:p-4 flex gap-2 sm:gap-3 items-end bg-surface-50">
               {/* Voice button */}
               {speechSupported && (
                 <button
@@ -1069,7 +1170,7 @@ export default function TutorPage() {
                   onClick={toggleVoice}
                   disabled={loading}
                   className={clsx(
-                    'w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-all',
+                    'w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center shrink-0 transition-all',
                     'focus-visible:ring-2 focus-visible:ring-brand-500',
                     isListening
                       ? 'bg-red-100 text-red-500 animate-pulse border-2 border-red-300'
@@ -1079,7 +1180,7 @@ export default function TutorPage() {
                   aria-label={isListening ? 'Stop voice input' : 'Start voice input'}
                   aria-pressed={isListening}
                 >
-                  {isListening ? <MicOff size={18} /> : <Mic size={18} />}
+                  {isListening ? <MicOff size={17} /> : <Mic size={17} />}
                 </button>
               )}
 
@@ -1093,9 +1194,9 @@ export default function TutorPage() {
                     sendMessage(input);
                   }
                 }}
-                placeholder="Ask anything… (Enter to send, Shift+Enter for new line)"
+                placeholder="Ask anything…"
                 rows={2}
-                className="flex-1 resize-none bg-white border-2 border-surface-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-400 placeholder:text-stone-400 min-h-[48px]"
+                className="flex-1 resize-none bg-white border-2 border-surface-200 rounded-xl px-3 py-2.5 sm:px-4 sm:py-3 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-400 placeholder:text-stone-400 min-h-[48px]"
                 aria-label="Type your question"
                 disabled={loading}
               />
@@ -1103,8 +1204,20 @@ export default function TutorPage() {
                 onClick={() => sendMessage(input)}
                 loading={loading}
                 disabled={!input.trim()}
+                icon={<Send size={16} />}
+                size="sm"
+                className="sm:hidden shrink-0 self-end"
+                aria-label="Send message"
+              >
+                Send
+              </Button>
+              <Button
+                onClick={() => sendMessage(input)}
+                loading={loading}
+                disabled={!input.trim()}
                 icon={<Send size={18} />}
                 size="lg"
+                className="hidden sm:flex shrink-0"
                 aria-label="Send message"
               >
                 Send

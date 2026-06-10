@@ -65,7 +65,7 @@ test.describe('AI Tutor — learner', () => {
 
     // The user bubble should appear in the chat (the title also shows in the sidebar).
     await expect(
-      page.getByLabel('Chat messages').getByText('What is photosynthesis?'),
+      page.getByLabel('Chat messages').getByText('What is photosynthesis?').first(),
     ).toBeVisible({ timeout: 5_000 });
 
     // Wait for the assistant response — the loading spinner disappears and a

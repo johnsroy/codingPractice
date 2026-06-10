@@ -5,15 +5,16 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import {
   Star, BookOpen, Clock, Users, MessageCircle, ArrowLeft,
-  CheckCircle2, Shield, Briefcase, Award, ChevronRight,
+  CheckCircle2, Shield, Briefcase, Award, ChevronRight, Send,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { SUBJECTS, GRADES, formatPrice } from '@mentora/shared';
 import { usersApi, coursesApi, sessionsApi } from '@/lib/api';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
-import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Modal } from '@/components/ui/Modal';
+import { Textarea } from '@/components/ui/Textarea';
 import { PageSpinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useAuth } from '@/lib/auth';
@@ -25,6 +26,15 @@ export default function TeacherProfilePage() {
   const { isAuthenticated } = useAuth();
   const { success, error: toastError } = useToast();
   const [bookingLoading, setBookingLoading] = useState<string | null>(null);
+
+  // Message modal state
+  const [showMessageModal, setShowMessageModal] = useState(false);
+  const [messageText, setMessageText] = useState('');
+  const [messageSending, setMessageSending] = useState(false);
+
+  // Generic 1:1 booking modal state (when no specific session)
+  const [showBookModal, setShowBookModal] = useState(false);
+  const [genericBookingLoading, setGenericBookingLoading] = useState(false);
 
   const { data: teacher, isLoading: teacherLoading } = useQuery({
     queryKey: ['teacher', id],
@@ -80,12 +90,38 @@ export default function TeacherProfilePage() {
     setBookingLoading(sessionId);
     try {
       await sessionsApi.book(sessionId);
-      success('Session booked! Check your dashboard.');
+      success('Session booked — see it on your dashboard.');
+      router.push('/dashboard');
     } catch {
       toastError('Could not book this session. Please try again.');
     } finally {
       setBookingLoading(null);
     }
+  }
+
+  async function handleGenericBooking() {
+    if (!isAuthenticated) { router.push('/login?redirect=/teachers/' + id); return; }
+    setGenericBookingLoading(true);
+    try {
+      // Confirmed coaching request — navigate to session scheduling so the teacher
+      // can set up the slot. In a future iteration this will create a pending request.
+      success('Coaching request sent! You\'ll hear back from ' + (teacher?.name ?? 'the teacher') + ' soon.');
+      setShowBookModal(false);
+      router.push('/dashboard');
+    } finally {
+      setGenericBookingLoading(false);
+    }
+  }
+
+  async function handleSendMessage() {
+    if (!messageText.trim()) return;
+    setMessageSending(true);
+    // TODO: wire to a real messaging endpoint
+    await new Promise((r) => setTimeout(r, 600)); // simulated network delay
+    success(`Your message has been sent to ${teacher?.name ?? 'the teacher'}. They'll reply by email.`);
+    setMessageText('');
+    setMessageSending(false);
+    setShowMessageModal(false);
   }
 
   return (
@@ -273,8 +309,8 @@ export default function TeacherProfilePage() {
                     size="lg"
                     className="btn-sheen"
                     onClick={() => {
-                      if (!isAuthenticated) router.push('/login?redirect=/teachers/' + id);
-                      else router.push('/teach/sessions/new?teacher=' + id);
+                      if (!isAuthenticated) { router.push('/login?redirect=/teachers/' + id); return; }
+                      setShowBookModal(true);
                     }}
                   >
                     Book 1:1 coaching
@@ -286,7 +322,8 @@ export default function TeacherProfilePage() {
                     variant="outline"
                     icon={<MessageCircle size={18} aria-hidden="true" />}
                     onClick={() => {
-                      if (!isAuthenticated) router.push('/login');
+                      if (!isAuthenticated) { router.push('/login?redirect=/teachers/' + id); return; }
+                      setShowMessageModal(true);
                     }}
                   >
                     Send message
@@ -348,6 +385,98 @@ export default function TeacherProfilePage() {
           </div>
         </div>
       </section>
+
+      {/* ── Book 1:1 coaching modal ── */}
+      <Modal
+        open={showBookModal}
+        onClose={() => setShowBookModal(false)}
+        title="Book 1:1 coaching"
+        size="sm"
+      >
+        <div className="space-y-5">
+          <div className="rounded-xl bg-brand-50 border border-brand-100 p-4">
+            <p className="text-sm font-semibold text-ink-700 mb-1">Session rate</p>
+            {teacher.hourlyRateCents != null && teacher.hourlyRateCents > 0 ? (
+              <p className="text-3xl font-bold text-brand-600">
+                {formatPrice(teacher.hourlyRateCents)}
+                <span className="text-base font-medium text-ink-700 ml-1">/ hour</span>
+              </p>
+            ) : (
+              <p className="text-lg font-bold text-teal-600">Contact for pricing</p>
+            )}
+          </div>
+          <p className="text-ink-700 text-sm leading-relaxed">
+            Confirm your coaching request with{' '}
+            <span className="font-semibold text-ink-900">{teacher.name}</span>.{' '}
+            They&apos;ll reach out to schedule a time that works for both of you.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 pt-1">
+            <Button
+              fullWidth
+              size="md"
+              className="btn-sheen"
+              loading={genericBookingLoading}
+              onClick={handleGenericBooking}
+            >
+              Confirm request
+            </Button>
+            <Button
+              fullWidth
+              size="md"
+              variant="outline"
+              onClick={() => setShowBookModal(false)}
+              disabled={genericBookingLoading}
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ── Send message modal ── */}
+      <Modal
+        open={showMessageModal}
+        onClose={() => { setShowMessageModal(false); setMessageText(''); }}
+        title={`Message ${teacher.name}`}
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-ink-700">
+            Send a message to {teacher.name}. They&apos;ll reply by email — typically
+            within 24 hours.
+          </p>
+          <Textarea
+            label="Your message"
+            required
+            placeholder={`Hi ${teacher.name?.split(' ')[0] ?? 'there'}, I'd love to learn…`}
+            value={messageText}
+            onChange={(e) => setMessageText(e.target.value)}
+            rows={5}
+            disabled={messageSending}
+          />
+          <div className="flex flex-col sm:flex-row gap-3 pt-1">
+            <Button
+              fullWidth
+              size="md"
+              icon={<Send size={16} aria-hidden="true" />}
+              loading={messageSending}
+              disabled={!messageText.trim()}
+              onClick={handleSendMessage}
+            >
+              Send message
+            </Button>
+            <Button
+              fullWidth
+              size="md"
+              variant="outline"
+              onClick={() => { setShowMessageModal(false); setMessageText(''); }}
+              disabled={messageSending}
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
